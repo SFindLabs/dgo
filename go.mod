@@ -21,6 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/robfig/config v0.0.0-20141207224736-0f78529c8c7e
+	github.com/urfave/cli v1.22.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6
 	moul.io/http2curl v1.0.0 // indirect
