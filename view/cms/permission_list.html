@@ -1,0 +1,96 @@
+{{define "cms/permission_list.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            权限管理 / <a onclick="window.location.reload()">菜单管理</a>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content">
+                        <a href="/permissionaddpage?id=0">
+                            <button type="button" class="btn btn-sm btn-primary">
+                                添加菜单
+                            </button>
+                        </a>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>菜单名称</th>
+                                        <th>路径</th>
+                                        <th>导航展示</th>
+                                        <th>权限传递</th>
+                                        <th>记录日志</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .lists}}
+                                    <tr>
+                                        <td>{{.Level|htmlSpace}}{{.Name}}</td>
+                                        <td>{{.Path}}</td>
+                                        <td>{{if eq .IsShow  1}} 是 {{else}} 否 {{end}}</td>
+                                        <td>{{if eq .IsModify  1}} 是 {{else}} 否 {{end}}</td>
+                                        <td>{{if eq .IsRecord  1}} 是 {{else}} 否 {{end}}</td>
+                                        <td>{{.CreatedAt}}</td>
+                                        <td>
+                                            <a href="/permissioneditpage?id={{.ID}}">
+                                                <button type="button" class="btn btn-xs btn-info">编辑
+                                                </button>
+                                            </a>
+                                            <a onclick="del_permission({{.ID}})">
+                                                <button type="button" class="btn btn-xs btn-warning">删除
+                                                </button>
+                                            </a>
+                                            <a href="/permissionaddpage?id={{.ID}}">
+                                                <button type="button" class="btn btn-xs btn-primary">
+                                                    添加子菜单
+                                                </button>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{end}}
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    function del_permission(id){
+        layer.confirm("确定删除(父菜单包含的子菜单也会删除,请慎重删除父菜单)?", {
+            btn: ['确定','取消']
+        }, function() {
+            $.post("/permissiondel", {id:id},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{{end}}

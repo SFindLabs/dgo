@@ -1,0 +1,37 @@
+{{define "cms/common_page.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+<div class="ip-attack">
+    <dl>
+        <div class="middle-box text-center  ">
+            <h1>{{.code}}</h1>
+            <h2 class="font-bold">{{.msg}}</h2>
+            <div class="error-desc">
+                <dt>
+                    页面自动 <a id="href" href=" {{ if eq .url "" }}javascript:history.go(-1){{else}}{{.url}}{{end}}">跳转</a> 等待时间： <b id="wait">{{.wait}}</b>
+                </dt>
+            </div>
+        </div>
+    </dl>
+</div>
+
+{{ template "footer" . }}
+<script>
+    $(function (){
+        var wait = document.getElementById('wait'),
+            href = document.getElementById('href').href;
+        var interval = setInterval(function(){
+            var time = --wait.innerHTML;
+            if(time <= 0) {
+                {{ if eq .url "" }}
+                    location.href = href;
+                {{else}}
+                    parent.location.href = href;
+                {{end}}
+                clearInterval(interval);
+            }
+        }, 1000);
+    });
+</script>
+{{ end }}

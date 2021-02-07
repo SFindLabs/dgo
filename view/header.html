@@ -1,0 +1,52 @@
+{{ define "header" }}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Cache-control" content="no-store, must-revalidate">
+    <meta http-equiv="Cache" content="no-cache">
+    <base target="_self">
+    <title>后台</title>
+
+    <meta name="keywords" content="后台">
+    <meta name="description" content="后台">
+
+    <!--[if lt IE 9]>
+    <meta http-equiv="refresh" content="0;ie.html" />
+    <![endif]-->
+
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{.token}}">
+
+    <link rel="shortcut icon" href="/assets/hplus/favicon.ico">
+    <link href="/assets/hplus/css/bootstrap.min.css?v=3.3.6" rel="stylesheet">
+    <link href="/assets/hplus/css/font-awesome.min.css?v=4.4.0" rel="stylesheet">
+    <link href="/assets/hplus/css/animate.css" rel="stylesheet">
+    <link href="/assets/hplus/css/style.css?v=4.1.0" rel="stylesheet">
+
+    <style>
+        .progress {
+            width: 100%;
+            height: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+
+        .progress>div {
+            width: 0;
+            height: 100%;
+            background-color: yellowgreen;
+            transition: all .3s ease;
+        }
+    </style>
+
+</head>
+{{ end }}

@@ -1,0 +1,44 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": 8086,
+        "is_test": 1
+    },
+    "session": {
+        "name": "dgosession",
+        "max_age": 7200
+    },
+    "mysql": {
+        "user": "root",
+        "password": "",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "db": "dgo",
+        "read": [{
+            "db": "dgo"
+        },{
+            "db": "dgo"
+        }],
+        "game_0": {
+            "db": "dgo",
+            "max_life_time": 10,
+            "max_idle_conn": 10,
+            "max_open_conn": 10,
+            "read": [{
+                "db": "flarum"
+            }]
+        }
+    },
+    "redis": {
+        "host": "127.0.0.1",
+        "port": 6379,
+        "auth": "",
+        "db": 0,
+        "game_0": {
+            "db": 1,
+            "max_idle": 10,
+            "max_active": 10,
+            "idle_timeout": 10
+        }
+    }
+}

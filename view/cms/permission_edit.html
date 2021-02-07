@@ -1,0 +1,109 @@
+{{define "cms/permission_edit.html"}}
+{{ template "header" . }}
+<style>
+    .custom-radio{
+        width: 18px;
+        height: 18px;
+    }
+</style>
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        权限管理 / <a href="/permission">菜单管理</a> / <a onclick="window.location.reload()">编辑菜单</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <input type="hidden" name="id" value="{{ .obj.ID }}">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">选择父级菜单</label>
+                            <div class="col-sm-4">
+                                <select class="form-control m-b" name="pid" aria-label="">
+                                    <option value="0">--请选择父级菜单--</option>
+                                    {{ range .lists }}
+                                    <option value="{{.ID}}" {{ if eq $.obj.Pid .ID}}selected{{end}}>{{.Level|htmlSpace}}{{.Name}}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">菜单名称：</label>
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="name" value="{{.obj.Name}}" class="form-control" required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">路径：</label>
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="path" value="{{.obj.Path}}" class="form-control" required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">导航展示：</label>
+                            <div class="col-sm-3 radio i-checks" style="padding-left: 15px">
+                                <label><input type="radio" {{ if eq .obj.IsShow 1}}checked{{end}} value="1" name="is_show" class="custom-radio"> <i></i>是</label>
+                                <label style="margin-left: 15px"><input type="radio" {{ if eq .obj.IsShow 0}}checked{{end}} value="2" name="is_show" class="custom-radio"><i></i>否</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">权限传递：</label>
+                            <div class="col-sm-3 radio i-checks" style="padding-left: 15px">
+                                <label><input type="radio" {{ if eq .obj.IsModify 1}}checked{{end}}  value="1" name="is_modify" class="custom-radio"> <i></i>是</label>
+                                <label style="margin-left: 15px"><input type="radio" {{ if eq .obj.IsModify 0}}checked{{end}} value="2" name="is_modify" class="custom-radio"><i></i>否</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">记录日志：</label>
+                            <div class="col-sm-3 radio i-checks" style="padding-left: 15px">
+                                <label><input type="radio" {{ if eq .obj.IsRecord 1}}checked{{end}} value="1" name="is_record" class="custom-radio"> <i></i>是</label>
+                                <label style="margin-left: 15px"><input type="radio" {{ if eq .obj.IsRecord 0}}checked{{end}} value="2" name="is_record" class="custom-radio"><i></i>否</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="edit_permission()">修 改</button>
+                                <a href="/permission" class="btn btn-sm btn-white">取消</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    function edit_permission(){
+        var id = $("input[name='id']").val();
+        var pid = $("select[name='pid']").val();
+        var name = $("input[name='name']").val();
+        var path = $("input[name='path']").val();
+        var is_show = $("input[name='is_show']:checked").val();
+        var is_modify = $("input[name='is_modify']:checked").val();
+        var is_record = $("input[name='is_record']:checked").val();
+
+        $.post("/permissionedit", {id:id, name:name, pid:pid, path:path, show:is_show, modify:is_modify, record: is_record},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.href = "/permission";
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

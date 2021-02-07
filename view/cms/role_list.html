@@ -1,0 +1,89 @@
+{{define "cms/role_list.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            权限管理 / <a onclick="window.location.reload()">角色管理</a>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content">
+                        <a href="/roleaddpage">
+                            <button type="button" class="btn btn-sm btn-primary">
+                                添加角色
+                            </button>
+                        </a>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>角色名称</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .lists}}
+                                    <tr>
+                                        <td>{{.ID}}</td>
+                                        <td>{{.Name}}</td>
+                                        <td>{{.CreatedAt}}</td>
+                                        <td>
+                                            <a href="/roleeditpage?id={{.ID}}">
+                                                <button type="button" class="btn btn-xs btn-info" {{if eq .ID  1}} disabled {{end}}>编辑
+                                                </button>
+                                            </a>
+                                            <a onclick="del_role({{.ID}})">
+                                                <button type="button" class="btn btn-xs btn-warning" {{if eq .ID  1}} disabled {{end}}>删除
+                                                </button>
+                                            </a>
+                                            <a href="/permissionsofrole?id={{.ID}}">
+                                                <button type="button" class="btn btn-xs btn-primary">分配权限
+                                                </button>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{end}}
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    function del_role(id){
+        layer.confirm("确定删除?", {
+            btn: ['确定','取消']
+        }, function() {
+            $.post("/roledel", {id:id},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{{end}}

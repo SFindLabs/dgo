@@ -1,0 +1,36 @@
+{{ define "footer"}}
+
+    <!-- 全局js -->
+    <script src="/assets/hplus/js/jquery.min.js?v=2.1.4"></script>
+    <script src="/assets/hplus/js/bootstrap.min.js?v=3.3.6"></script>
+    <script src="/assets/hplus/js/plugins/metisMenu/jquery.metisMenu.js"></script>
+    <script src="/assets/hplus/js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+    <script src="/assets/hplus/js/plugins/layer/layer.min.js"></script>
+
+    <!-- 自定义js -->
+    <script src="/assets/hplus/js/hplus.js?v=4.1.0"></script>
+    <script type="text/javascript" src="/assets/hplus/js/contabs.js"></script>
+
+    <!-- 第三方插件 -->
+    {{/*<script src="/assets/hplus/js/plugins/pace/pace.min.js"></script>*/}}
+
+    <script type="text/javascript">
+        $.ajaxSetup({
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        function getObjectURL(file) {
+            var url = null ;
+            if (typeof(window.createObjectURL) != "undefined") {
+                url = window.createObjectURL(file) ;
+            } else if (typeof(window.URL) != "undefined") {
+                url = window.URL.createObjectURL(file) ;
+            } else if (typeof(window.webkitURL) != "undefined") {
+                url = window.webkitURL.createObjectURL(file) ;
+            }
+            return url ;
+        }
+    </script>
+</html>
+
+{{ end }}

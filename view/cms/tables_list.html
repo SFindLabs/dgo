@@ -1,0 +1,76 @@
+{{define "cms/tables_list.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            权限管理 / <a onclick="window.location.reload()">数据表列表</a>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content">
+                        <a href="/generatepage">
+                            <button type="button" class="btn btn-sm btn-primary">
+                                model生成器
+                            </button>
+                        </a>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>表名</th>
+                                        <th>引擎</th>
+                                        <th>字符集</th>
+                                        <th>备注</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {{ if gt .count 0 }}
+                                    {{range .lists}}
+                                    <tr>
+                                        <td>{{.Name}}</td>
+                                        <td>{{.Engine}}</td>
+                                        <td>{{.Collation}}</td>
+                                        <td>{{.Comment}}</td>
+                                        <td>{{.Create_time}}</td>
+                                        <td>
+                                            <button class="btn btn-info btn-xs" type="button" data="{{.Name}}" onclick="optimize($(this).attr('data'));">优化
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {{end}}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="7" class="text-center">没有数据</td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    // 优化
+    function optimize(table) {
+        $.post("/tables/optimize", {table: table}, function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {icon: 1, time: 1000, title: "提示"});
+            }
+        })
+    }
+</script>
+{{end}}

@@ -1,0 +1,89 @@
+{{define "cms/user_add.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        权限管理 / <a href="/user">用户管理</a> / <a onclick="window.location.reload()">添加用户</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">用户名：</label>
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="name" class="form-control" autofocus required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">密码：</label>
+                            <div class="col-sm-3">
+                                <input type="password" placeholder="" name="password" class="form-control" required><img src="/assets/img/icon-invisible.png" class="eye-pic is-invisible" style="width: 32px;height: 18px; margin-top: -24px; margin-right: 4px; float: right" alt=""> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">角色分配：</label>
+                            <div class="col-sm-3">
+                                <select class="form-control m-b" name="role_id" aria-label="">
+                                    <option value="0">--请选择角色--</option>
+                                    {{ range .lists }}
+                                        <option value="{{ .ID }}">{{ .Name }}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="add_user()">添 加</button>
+                                <a href="/user" class="btn btn-sm btn-white">取消</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+{{ template "footer" . }}
+<script>
+
+    $(".eye-pic").on('click', function () {
+        var pwdClass = $("input[name='password']");
+        if($(this).hasClass('is-invisible')){
+            $(this).removeClass('is-invisible').addClass('is-visible').prop('src', "/assets/img/icon-visible.png");
+            pwdClass.prop('type','text');
+        }else{
+            $(this).removeClass('is-visible').addClass('is-invisible').prop('src', "/assets/img/icon-invisible.png");
+            pwdClass.prop('type','password');
+        }
+    });
+
+    function add_user(){
+        var name = $("input[name='name']").val();
+        var passwd = $("input[name='password']").val();
+        var role_id = $("select[name='role_id']").val();
+
+        $.post("/useradd", {name:name, passwd:passwd, role_id:role_id},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.href = "/user";
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

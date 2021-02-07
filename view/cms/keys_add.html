@@ -1,0 +1,98 @@
+{{define "cms/keys_add.html"}}
+{{ template "header" . }}
+
+<style>
+    .custom-radio{
+        width: 18px;
+        height: 18px;
+    }
+</style>
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        配置管理 / <a href="/keys">数据配置</a> / <a onclick="window.location.reload()">添加数据</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">描述：</label>
+
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="name" class="form-control" aria-label="" required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">键1：</label>
+
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="keyx1" class="form-control" aria-label="" required> <span class="help-block m-b-none"></span>
+                            </div>
+                            (键的值只能包含英文_，必填)
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">键2：</label>
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="keyx2" class="form-control" aria-label="" required> <span class="help-block m-b-none"></span>
+                            </div>
+                            (键的值只能包含英文_，非必填)
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">值：</label>
+
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="valuex" class="form-control" aria-label="" required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">状态：</label>
+                            <div class="col-sm-3 radio i-checks" style="padding-left: 15px">
+                                <label><input type="radio" value="2" name="status" checked class="custom-radio"><i></i>草稿</label>
+                                <label style="margin-left: 15px"><input type="radio" value="1" name="status" class="custom-radio"> <i></i>正常</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="add_key()">添 加</button>
+                                <a href="/keys" class="btn btn-sm btn-white">取消</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    function add_key(){
+        var name = $("input[name='name']").val();
+        var keyx1 = $("input[name='keyx1']").val();
+        var keyx2 = $("input[name='keyx2']").val();
+        var valuex = $("input[name='valuex']").val();
+        var status = $("input[name='status']:checked").val();
+        $.post("/keys/add", {name:name, keyx1:keyx1, keyx2:keyx2, valuex:valuex, status:status},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.href = "/keys";
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

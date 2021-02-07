@@ -1,0 +1,60 @@
+{{define "cms/role_edit.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        权限管理 / <a href="/role">角色管理</a> / <a onclick="window.location.reload()">编辑角色</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <input type="hidden" placeholder="" name="id" value="{{.obj.ID}}" class="form-control">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">角色名称：</label>
+                            <div class="col-sm-3">
+                                <input type="text" placeholder="" name="name" value="{{.obj.Name}}" class="form-control" required> <span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="edit_role()">修 改</button>
+                                <a href="/role" class="btn btn-sm btn-white">取消</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+
+{{ template "footer" . }}
+<script>
+    function edit_role(){
+        var name = $("input[name='name']").val();
+        var id = $("input[name='id']").val();
+        $.post("/roleedit", {id:id, name:name},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.href = "/role";
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

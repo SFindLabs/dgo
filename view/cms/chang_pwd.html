@@ -1,0 +1,106 @@
+{{define "cms/chang_pwd.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        个人设置 / <a onclick="window.location.reload()">密码修改</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">旧密码：</label>
+                            <div class="col-sm-3">
+                                <input type="password" name="old_passwd" class="form-control" placeholder="" required><img src="/assets/img/icon-invisible.png" class="eye-pic-old is-invisible" style="width: 32px;height: 18px; margin-top: -24px; margin-right: 4px; float: right" alt=""><span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">新密码：</label>
+                            <div class="col-sm-3">
+                                <input type="password" name="passwd" class="form-control" placeholder="" required><img src="/assets/img/icon-invisible.png" class="eye-pic-new is-invisible" style="width: 32px;height: 18px; margin-top: -24px; margin-right: 4px; float: right" alt=""><span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">确认新密码：</label>
+                            <div class="col-sm-3">
+                                <input type="password" name="confirm_passwd" class="form-control" placeholder="" required><img src="/assets/img/icon-invisible.png" class="eye-pic-confirm is-invisible" style="width: 32px;height: 18px; margin-top: -24px; margin-right: 4px; float: right" alt=""><span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="changePwd()">修 改</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+
+{{ template "footer" . }}
+<script>
+    $(".eye-pic-old").on('click', function () {
+        var pwdClass = $("input[name='old_passwd']");
+        if($(this).hasClass('is-invisible')){
+            $(this).removeClass('is-invisible').addClass('is-visible').prop('src', "/assets/img/icon-visible.png");
+            pwdClass.prop('type','text');
+        }else{
+            $(this).removeClass('is-visible').addClass('is-invisible').prop('src', "/assets/img/icon-invisible.png");
+            pwdClass.prop('type','password');
+        }
+    });
+    $(".eye-pic-new").on('click', function () {
+        var pwdClass = $("input[name='passwd']");
+        if($(this).hasClass('is-invisible')){
+            $(this).removeClass('is-invisible').addClass('is-visible').prop('src', "/assets/img/icon-visible.png");
+            pwdClass.prop('type','text');
+        }else{
+            $(this).removeClass('is-visible').addClass('is-invisible').prop('src', "/assets/img/icon-invisible.png");
+            pwdClass.prop('type','password');
+        }
+    });
+    $(".eye-pic-confirm").on('click', function () {
+        var pwdClass = $("input[name='confirm_passwd']");
+        if($(this).hasClass('is-invisible')){
+            $(this).removeClass('is-invisible').addClass('is-visible').prop('src', "/assets/img/icon-visible.png");
+            pwdClass.prop('type','text');
+        }else{
+            $(this).removeClass('is-visible').addClass('is-invisible').prop('src', "/assets/img/icon-invisible.png");
+            pwdClass.prop('type','password');
+        }
+    });
+
+    function changePwd(){
+        var oldPwd = $("input[name='old_passwd']").val();
+        var pwd = $("input[name='passwd']").val();
+        var confirmPwd = $("input[name='confirm_passwd']").val();
+
+        $.post("/pwdedit", {old_passwd:oldPwd, passwd:pwd, confirm_passwd:confirmPwd},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            }else{
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        $.get("/logout",function (res) {
+                            var json = $.parseJSON(res);
+                            if (json.status === 200){
+                                window.location.href = "/login";
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

@@ -1,0 +1,104 @@
+{{define "cms/role_permission.html"}}
+{{ template "header" . }}
+<link rel="stylesheet" href="/assets/ztree/css/bootstrapStyle/bootstrapStyle.css" type="text/css">
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        权限管理 / <a href="/role">角色管理</a> / <a onclick="window.location.reload()">权限分配</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <ul id="tree" class="ztree text-center"></ul>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary" onclick="change_permission()">保 存</button>
+                                <a href="/permissionsofrole" class="btn btn-sm btn-white">取消</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+{{ template "footer" . }}
+<script src="/assets/ztree/js/jquery.ztree.core.js"></script>
+<script src="/assets/ztree/js/jquery.ztree.excheck.js"></script>
+<script src="/assets/ztree/js/jquery.ztree.exedit.js"></script>
+
+<script>
+    var setting = {
+        view: {},
+        check: {enable: true},
+        data: {simpleData: {enable: true, pIdKey : "pid",}},
+        callback:{
+            onCheck:onCheck
+        }
+    };
+    var ids = Array();
+    $(function(){
+        $.ajax({
+            type: 'POST',
+            dataType: "json",
+            data: {role_id:"{{ .role_id }}"},
+            url: "/getpermissionsofrole",
+            error: function () {
+                layer.msg("请求失败", {icon: 2, time: 1800, title: "提示"});
+            },
+            success:function(res){
+                if(res.status !== 200 && res.status !== 20023){
+                    layer.msg(res.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(res.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    $.fn.zTree.init($("#tree"), setting, res.data.lists);
+                    zTreeOnAsyncSuccess();
+                }
+            }
+        });
+    });
+    function zTreeOnAsyncSuccess(event, treeId, treeNode, msg) {
+        ids = [];
+        var treeObj=$.fn.zTree.getZTreeObj("tree");
+        var nodes = treeObj.getCheckedNodes(true);
+        for(var i=0; i<nodes.length; i++){
+            ids.push(nodes[i].id);
+        }
+    }
+    function onCheck(e,treeId,treeNode){
+        ids = [];
+        var treeObj=$.fn.zTree.getZTreeObj("tree");
+        var nodes = treeObj.getCheckedNodes(true);
+        for(var i=0; i<nodes.length; i++){
+            ids.push(nodes[i].id);
+        }
+    }
+
+    function change_permission(){
+        jQuery.ajaxSettings.traditional = true;
+        $.post("/permissionsofrolesave", {role_id:"{{ .role_id }}", permissions: ids}, function(res){
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.href = "/permissionsofrole";
+                    }
+                });
+            }
+        });
+    }
+</script>
+{{end}}

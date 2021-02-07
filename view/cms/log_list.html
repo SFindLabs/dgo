@@ -1,0 +1,136 @@
+{{define "cms/log_list.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            权限管理 / <a onclick="window.location.reload()">日志记录</a>
+        </div>
+        <div role="form" class="form-inline">
+            <div class="ibox-title">
+                <div class="form-group">
+                    <label for="name" class="sr-only">用户名</label>
+                    <input type="text" name="searchName" placeholder="请输入用户名" class="form-control" value="{{ .searchName }}">
+                </div>
+                <button class="btn btn-white" onclick="search()"><i class="fa fa-search"></i> 搜索</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content">
+                        <button class="btn btn-xs btn-info" onclick="checkAll(true)">全选</button>
+                        <button class="btn btn-xs btn-info" onclick="checkAll(false)">全不选</button>
+                        <button class="btn btn-xs btn-info" onclick="checkReverse()">反选</button>
+                        <button class="btn btn-xs btn-warning" onclick="delete_check()">删除</button>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>ID</th>
+                                        <th>用户名</th>
+                                        <th>操作</th>
+                                        <th>路径</th>
+                                        <th>请求方法</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {{ if gt .count 0 }}
+                                    {{range .lists}}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="input[]" value="{{.ID}}" aria-label="">
+                                        </td>
+                                        <td>{{.ID}}</td>
+                                        <td>{{.UserName}}</td>
+                                        <td>{{.Option}}</td>
+                                        <td>{{.Path}}</td>
+                                        <td>{{.Method}}</td>
+                                        <td>{{.CreatedAt}}</td>
+                                    </tr>
+                                    {{end}}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="7" class="text-center">没有数据</td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    
+    $(function () {
+        if({{.count}}){
+            $(".table-responsive").append({{ .paginate }})
+        }
+    });
+
+    function search() {
+        var name = $("input[name='searchName']").val();
+        window.location.href = {{ .toUrl }} + "&searchName=" + name;
+    }
+
+    function checkAll(ok){
+        var checkboxs = $("input[name='input[]']");
+        if (ok){
+            checkboxs.each(function(){
+                $(this).prop("checked",true)
+            })
+        }else {
+            checkboxs.each(function(){
+                $(this).prop("checked",false)
+            })
+        }
+    }
+
+    function checkReverse() {
+        var checkboxs = $("input[name='input[]']");
+        checkboxs.each(function(){
+            this.checked = !this.checked
+        })
+    }
+
+    function delete_check(){
+        var ids = Array();
+        var checkboxs = $("input[name='input[]']");
+        checkboxs.each(function(){
+            if (this.checked) {
+                ids.push(parseInt(this.value));
+            }
+        });
+
+        layer.confirm("确定删除?", {
+            btn: ['确定','取消']
+        }, function() {
+            jQuery.ajaxSettings.traditional = true;
+            $.post("/logrecorddel", {ids:ids},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{{end}}

@@ -1,0 +1,195 @@
+{{ define "cms/keys_list.html" }}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            配置管理 / <a onclick="window.location.reload()">数据配置</a>
+        </div>
+        <div role="form" class="form-inline">
+            <div role="form" class="form-inline">
+                <div class="ibox-title">
+                    <div class="form-group">
+                        <label for="name" class="sr-only">键</label>
+                        <input type="text" name="searchName" placeholder="请输入键" class="form-control" value="{{ .searchName }}" aria-label="">
+                    </div>
+                    <button class="btn btn-white" onclick="search()"><i class="fa fa-search"></i> 搜索</button>
+                </div>
+            </div>
+            <div class="row"> 
+                <div class="col-sm-12">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-content">
+                            <a href="/keys/addpage" style="float: right">
+                                <button type="button" class="btn btn-sm btn-primary">
+                                    添加数据
+                                </button>
+                            </a>
+                            <button class="btn btn-xs btn-info" onclick="checkAll(true)">全选</button>
+                            <button class="btn btn-xs btn-info" onclick="checkAll(false)">全不选</button>
+                            <button class="btn btn-xs btn-info" onclick="checkReverse()">反选</button>
+                            <button class="btn btn-xs btn-warning" onclick="delete_check(true)">删除</button>
+                        </div>
+                        <div class="ibox-content">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>ID</th>
+                                            <th class="col-sm-1">排序</th>
+                                            <th>描述</th>
+                                            <th>键1</th>
+                                            <th>键2</th>
+                                            <th>值</th>
+                                            <th>状态</th>
+                                            <th>创建时间</th>
+                                            <th>更新时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {{ if gt .count 0 }}
+                                        {{range .lists}}
+                                        <tr>
+
+                                            <td>
+                                                <input type="checkbox" name="input[]" value="{{.ID}}" aria-label="">
+                                            </td>
+                                            <td>{{.ID}}</td>
+                                            <td>
+                                                <input type="number" class="form-control" value="{{.SortNum}}" aria-label="" onblur="changeSort({{.ID}}, this.value)">
+                                            </td>
+                                            <td>{{.Name}}</td>
+                                            <td>{{.Keyx1}}</td>
+                                            <td>{{.Keyx2}}</td>
+                                            <td>{{.Valuex}}</td>
+                                            {{if eq .Status  1}}
+                                                <td style="color: #00d95a">正常</td>
+                                            {{else}}
+                                                <td style="color: #8a1f11">草稿</td>
+                                            {{end}}
+                                            <td>{{.CreatedAt}}</td>
+                                            <td>{{.UpdatedAt}}</td>
+                                            <td>
+
+                                                <a href="/keys/editpage?id={{.ID}}">
+                                                    <button type="button" class="btn btn-xs btn-primary">编辑
+                                                    </button>
+                                                </a>
+
+                                                <a onclick="delete_check(false, {{.ID}})">
+                                                    <button type="button" class="btn btn-xs btn-warning">删除
+                                                    </button>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {{end}}
+                                    {{ else }}
+                                        <tr>
+                                            <td colspan="7" class="text-center">没有数据</td>
+                                        </tr>
+                                    {{ end }}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+{{ template "footer" . }}
+
+<script type="text/javascript">
+    $(function () {
+        if({{.count}}){
+            $(".table-responsive").append({{ .paginate }})
+        }
+    });
+
+    function search() {
+        var name = $("input[name='searchName']").val();
+        window.location.href = {{ .toUrl }} + "&searchName=" + name;
+    }
+
+    function changeSort(id, num) {
+        $.post("/keys/sort", {id:id, sort_num:num},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.reload();
+                    }
+                });
+            }
+        });
+    }
+
+    function checkAll(ok){
+        var checkboxs = $("input[name='input[]']");
+        if (ok){
+            checkboxs.each(function(){
+                $(this).prop("checked",true)
+            })
+        }else {
+            checkboxs.each(function(){
+                $(this).prop("checked",false)
+            })
+        }
+    }
+
+    function checkReverse() {
+        var checkboxs = $("input[name='input[]']");
+        checkboxs.each(function(){
+            this.checked = !this.checked
+        })
+    }
+
+    function delete_check(isCheck, id = null){
+        var ids = Array();
+        if (isCheck){
+            var checkboxs = $("input[name='input[]']");
+            checkboxs.each(function(){
+                if (this.checked) {
+                    ids.push(parseInt(this.value));
+                }
+            });
+        } else {
+            ids.push(parseInt(id));
+        }
+
+        layer.confirm("确定删除?", {
+            btn: ['确定','取消']
+        }, function() {
+            jQuery.ajaxSettings.traditional = true;
+            $.post("/keys/delete", {ids:ids},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{{end}}

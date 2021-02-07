@@ -1,0 +1,137 @@
+{{define "cms/user_list.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content">
+        <div class="ibox-title">
+            权限管理 / <a onclick="window.location.reload()">用户管理</a>
+        </div>
+        <form role="form" class="form-inline">
+            <div class="ibox-title">
+                <div class="form-group">
+                    <label for="name" class="sr-only">用户名</label>
+                    <input type="text" name="search_name" placeholder="请输入用户名" class="form-control" value="{{ .searchName }}">
+                </div>
+                <button class="btn btn-white" type="submit"><i class="fa fa-search"></i> 搜索</button>
+            </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content">
+                        <a href="/useraddpage">
+                            <button type="button" class="btn btn-sm btn-primary">
+                                添加用户
+                            </button>
+                        </a>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>用户名</th>
+                                        <th>头像</th>
+                                        <th>登录IP</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                        <th>最近登录时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .lists}}
+                                    <tr>
+                                        <td>{{.ID}}</td>
+                                        <td>{{.Name}}</td>
+                                        <td><img style="height: 70px;width: 90px;" src="{{.Avatar}}" alt=""/></td>
+                                        <td>{{.LoginIp}}</td>
+                                        {{if eq .Status  1}}
+                                        <td style="color: #00d95a">正常</td>
+                                        {{else}}
+                                        <td style="color: #8a1f11">禁用</td>
+                                        {{end}}
+                                        <td>{{.CreatedAt}}</td>
+                                        <td>{{.LoginAt}}</td>
+                                        <td>
+                                            <a href="/usereditpage?id={{.ID}}">
+                                                <button type="button" class="btn btn-xs btn-primary" {{if eq .ID  1}} disabled {{end}}>编辑
+                                                </button>
+                                            </a>
+                                            <a onclick="ban_user({{.ID}}, {{.Status}})">
+                                                <button type="button" class="btn btn-xs btn-warning" {{if eq .ID  1}} disabled {{end}}>{{if eq .Status  1}}禁用{{else}}启用{{end}}
+                                                </button>
+                                            </a>
+                                            <a onclick="del_user({{.ID}})">
+                                                <button type="button" class="btn btn-xs btn-danger" {{if eq .ID  1}} disabled {{end}}>删除
+                                                </button>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{end}}
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+          </div>
+        </form>
+    </div>
+</body>
+
+{{ template "footer" . }}
+<script>
+    function del_user(id){
+        layer.confirm("确定删除?", {
+            btn: ['确定','取消']
+        }, function() {
+            $.post("/userdel", {id:id},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    function ban_user(id, status) {
+        var text = '启用';
+        if (status === 1){
+            text = '禁用';
+        }
+        layer.confirm("确定"+ text +"?", {
+            btn: ['确定','取消']
+        }, function() {
+            $.post("/userban", {id:id},function (res) {
+                var jsonData = $.parseJSON(res);
+                if(jsonData.status !== 200 && jsonData.status !== 20023){
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if(jsonData.status === 20023) {
+                    window.location.href = "/nopermission";
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{{end}}

@@ -1,0 +1,212 @@
+{{define "cms/chang_pic.html"}}
+{{ template "header" . }}
+
+<body class="gray-bg">
+<div class="wrapper wrapper-content">
+    <div class="ibox-title">
+        个人设置 / <a onclick="window.location.reload()">头像修改</a>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">头像</label>
+                            <div class="col-sm-4">
+                                <input type="file" class="fileImg" name="file"/>
+                                <br>
+                                <img src="{{.pic}}" id="img0" class="hideImg" style="width: 120px;height: 120px" alt=""/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-6 col-sm-offset-2">
+                                <div class="progress">
+                                    <div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-3">
+                                <button class="btn btn-sm btn-primary change-pic-btn" onclick="changePic()">
+                                    修 改
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+
+{{ template "footer" . }}
+<script>
+    $(".fileImg").change(function(){
+        var objUrl = getObjectURL(this.files[0]) ;
+        if (objUrl)
+        {
+            $("#img0").prop("src", objUrl).css("display", 'block');
+        }
+    }) ;
+
+    /*function changePic(){
+        var file = $('.fileImg').get(0).files[0];
+        if (typeof(file) == "undefined") {
+            layer.msg("请选择文件", {icon: 2, time: 1800, title: "提示"});
+            return;
+        }
+        var fd = new FormData();
+        fd.append('file', file);
+        $.ajax({
+            url: "/picedit",
+            type: "POST",
+            processData: false,
+            contentType: false,
+            data: fd,
+            xhr: function() {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function (e) {
+                    var progressRate = (e.loaded / e.total) * 100 + '%';
+                    $('.progress > div').css('width', progressRate);
+                },false);
+                return xhr;
+            },
+            success: function(response) {
+                var jsonData = $.parseJSON(response);
+                if (jsonData.status !== 200) {
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else {
+                    layer.msg(jsonData.message, {
+                        icon: 1,
+                        time: 1000,
+                        title: "提示",
+                        end:function () {
+                            window.location.href="/home";
+                        }
+                    });
+                }
+            },
+            error: function () {
+                layer.msg("请求失败", {icon: 2, time: 1800, title: "提示"});
+            }
+        });
+    }*/
+
+    function changePic() {
+        var changeBtn = $(".change-pic-btn");
+        changeBtn.prop("disabled", true);
+        var file = $('.fileImg')[0].files[0];
+        if (typeof(file) == "undefined") {
+            changeBtn.prop("disabled", false);
+            layer.msg("请选择文件", {icon: 2, time: 1800, title: "提示"});
+            return;
+        }
+
+        var filename = file.name;
+        if (!filename.match(/.jpg|.jpeg|.png|.bmp/i)){
+            changeBtn.prop("disabled", false);
+            layer.msg("图片类型只支持jpg、png、bmp", {icon: 2, time: 1800, title: "提示"});
+            return false;
+        }
+
+        var burst_size = 2097152;   //2M
+        var totalSize = file.size; //文件总大小
+        var dir = "{{.userId}}" + "_" + (new Date().getTime())+'_pic';
+        var all_count = Math.ceil(totalSize / burst_size);
+        $.ajax({
+            url: "/checkpic",
+            type: "POST",
+            dataType: "json",
+            data: {filename: filename, dir: dir, total: all_count, size: totalSize},
+            success: function(res) {
+                if (res.status !== 200) {
+                    changeBtn.prop("disabled", false);
+                    layer.msg(res.message, {icon: 2, time: 1800, title: "提示"});
+                } else {
+                    if (res.data.count === 0){
+                        burstFile(file, 0, burst_size, totalSize, 1, dir, filename, burst_size,all_count, res.data.id);
+                    } else if(res.data.count < all_count){
+                        burstFile(file, res.data.count * burst_size, (res.data.count + 1) * burst_size, totalSize, res.data.count + 1, res.data.dir, filename, burst_size, all_count, res.data.id);
+                    } else {
+                        mergeFile(filename, dir, all_count, res.data.id)
+                    }
+                }
+            },
+            error: function () {
+                changeBtn.prop("disabled", false);
+                layer.msg("请求失败", {icon: 2, time: 1800, title: "提示"});
+            }
+        });
+    }
+
+    function burstFile(file,start,end,totalSize,index,dir,filename,burst_size,all_count,id) {
+        var fd = new FormData();                //每一次需要重新创建
+        var blob = file.slice(start,end);       //根据长度截取每次需要上传的数据
+        fd.append('file',blob);                 //添加数据到fd对象中
+        fd.append('filename',filename);
+        fd.append('index',index);
+        fd.append('dir',dir);
+        fd.append('record_id',id);
+        $.ajax({
+            url: "/picburstupload",
+            type: "POST",
+            processData: false,
+            contentType: false,
+            data: fd,
+            xhr: function() {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function (e) {
+                    var progressRate = (start + e.loaded) / totalSize * 100 + '%';
+                    $('.progress > div').css('width', progressRate);
+                },false);
+                return xhr;
+            },
+            success: function(response) {
+                var jsonData = $.parseJSON(response);
+                if (jsonData.status !== 200 && jsonData.status !== 20018) {
+                    $(".change-pic-btn").prop("disabled", false);
+                    $('.progress > div').css('width', 0);
+                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+                } else if (jsonData.status === 20018) {
+                    start = end;
+                    end = start + burst_size;
+                    index++;
+                    if (start < totalSize) {
+                        burstFile(file,start,end,totalSize,index,dir,filename,burst_size,all_count,id);
+                    } else {
+                        mergeFile(filename, dir,all_count,id)
+                    }
+                }
+            },
+            error: function () {
+                $(".change-pic-btn").prop("disabled", false);
+                $('.progress > div').css('width', 0);
+                layer.msg("请求失败", {icon: 2, time: 1800, title: "提示"});
+            }
+        });
+    }
+    
+    function mergeFile(filename, dir, all_count, id) {
+        $.post("/picburstmerge", {filename:filename, dir:dir, all_count:all_count, record_id:id},function (res) {
+            var jsonData = $.parseJSON(res);
+            $(".change-pic-btn").prop("disabled", false);
+            if (jsonData.status !== 200) {
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else {
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        parent.window.location.reload();
+                    }
+                });
+            }
+        });
+    }
+
+</script>
+{{end}}
