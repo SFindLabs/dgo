@@ -1,3 +1,5 @@
+#!/bin/bash
+
 PROCESS=`ps -ef|grep dgo_admin|grep -v grep|grep -v PPID|awk '{ print $2}'`
 for i in $PROCESS
 do

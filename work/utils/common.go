@@ -239,3 +239,33 @@ func XssConvertFunc(srcStr string, isEscape bool) string {
 	}
 	return result
 }
+
+//截取字符串
+func Substr(str string, substr string, count int) string {
+	s, c := 0, 0
+	ss := str
+	for {
+		i := UnicodeIndex(ss, substr)
+		s += i + 1
+		if i > -1 {
+			ss = string([]rune(ss)[i+1:])
+			c++
+			if c > count {
+				break
+			}
+		}
+	}
+	s -= 1
+	return string([]rune(str)[:s])
+}
+
+//获取中文字符串的子串字符位置
+func UnicodeIndex(str, substr string) int {
+	result := strings.Index(str, substr)
+	if result >= 0 {
+		prefix := []byte(str)[0:result]
+		rs := []rune(string(prefix))
+		result = len(rs)
+	}
+	return result
+}

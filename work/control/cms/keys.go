@@ -1,7 +1,6 @@
 package cms
 
 import (
-	//kgorm "dgo/framework/tools/db/gorm"
 	kinit "dgo/work/base/initialize"
 	kroute "dgo/work/base/route"
 	kcode "dgo/work/code"
@@ -13,8 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	//"net/http"
-	//"strconv"
 )
 
 type keys struct {
@@ -63,16 +60,20 @@ func (ts *keys) keyspage(c *gin.Context) {
 }
 
 type keySortBind struct {
-	ID      int64 `form:"id"  binding:"required"`
-	SortNum int64 `form:"sort_num"  binding:"-"`
+	ID      int64 `form:"id"  validate:"required,gt=0" label:"配置编号"`
+	SortNum int64 `form:"sort_num"  validate:"-" label:"排序"`
 }
 
 func (ts *keys) keysort(c *gin.Context) {
 	var param keySortBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -85,22 +86,26 @@ func (ts *keys) keysort(c *gin.Context) {
 }
 
 type keyDelBind struct {
-	Ids []int64 `form:"ids"  binding:"-"`
+	Ids []int64 `form:"ids"  validate:"gt=0" label:"勾选删除的数据配置"`
 }
 
 func (ts *keys) keydel(c *gin.Context) {
 	var param keyDelBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
-	if len(param.Ids) == 0 {
+	/*if len(param.Ids) == 0 {
 		kbase.SendErrorJsonStr(c, kcode.WRONG_LOGRECORD_NO_CHECK, "")
 		return
-	}
+	}*/
 
 	if err := kdaocms.CmsKeysObj.DeleteByIds(nil, param.Ids); err != nil {
 		kinit.LogError.Println(err)
@@ -116,19 +121,23 @@ func (ts *keys) keyaddpage(c *gin.Context) {
 }
 
 type keyaddBind struct {
-	Name   string `form:"name"  binding:"required"`
-	Keyx1  string `form:"keyx1"  binding:"required"`
-	Keyx2  string `form:"keyx2"  binding:"-"`
-	Valuex string `form:"valuex"  binding:"required"`
-	Status int64  `form:"status"  binding:"required"`
+	Name   string `form:"name"  validate:"required,max=64" label:"描述"`
+	Keyx1  string `form:"keyx1"  validate:"required,max=64" label:"键1"`
+	Keyx2  string `form:"keyx2"  validate:"max=64" label:"键2"`
+	Valuex string `form:"valuex"  validate:"required,max=255" label:"值"`
+	Status int64  `form:"status"  validate:"required,min=1,max=2" label:"状态"`
 }
 
 func (ts *keys) keyadd(c *gin.Context) {
 	var param keyaddBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -179,20 +188,24 @@ func (ts *keys) keyeditpage(c *gin.Context) {
 }
 
 type keyeditBind struct {
-	ID     int64  `form:"id"  binding:"required"`
-	Name   string `form:"name"  binding:"required"`
-	Keyx1  string `form:"keyx1"  binding:"required"`
-	Keyx2  string `form:"keyx2"  binding:"-"`
-	Valuex string `form:"valuex"  binding:"required"`
-	Status int64  `form:"status"  binding:"required"`
+	ID     int64  `form:"id"  validate:"required,gt=0" label:"配置编号"`
+	Name   string `form:"name"  validate:"required,max=64" label:"描述"`
+	Keyx1  string `form:"keyx1"  validate:"required,max=64" label:"键1"`
+	Keyx2  string `form:"keyx2"  validate:"max=64" label:"键2"`
+	Valuex string `form:"valuex"  validate:"required,max=255" label:"值"`
+	Status int64  `form:"status"  validate:"required,min=1,max=2" label:"状态"`
 }
 
 func (ts *keys) keyedit(c *gin.Context) {
 	var param keyeditBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 

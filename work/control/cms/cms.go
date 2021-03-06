@@ -140,17 +140,35 @@ func (ts *cms) captcha(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 // http://127.0.0.1:8082/login?name=admin&passwd=123456
 
-type loginBind struct {
+/*type loginBind struct {
 	Name    string `form:"name"  binding:"required"`
 	Passwd  string `form:"passwd"  binding:"required"`
 	Captcha string `form:"captcha"  binding:"required"`
+}*/
+
+type loginBind struct {
+	Name    string `form:"name"  validate:"required,max=50" label:"用户名"`
+	Passwd  string `form:"passwd"  validate:"required,max=255" label:"密码"`
+	Captcha string `form:"captcha"  validate:"required" label:"验证码"`
 }
 
 func (ts *cms) login(c *gin.Context) {
-	var param loginBind
+	/*var param loginBind
 	callbackName := kbase.GetParam(c, "callback")
 	if err := c.ShouldBind(&param); err != nil {
 		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		return
+	}*/
+
+	var param loginBind
+	callbackName := kbase.GetParam(c, "callback")
+	if err := c.Bind(&param); err != nil {
+		kinit.LogError.Println(err)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -263,15 +281,19 @@ func (ts *cms) roleaddpage(c *gin.Context) {
 }
 
 type roleaddBind struct {
-	Name string `form:"name"  binding:"required"`
+	Name string `form:"name"  validate:"required,max=50" label:"角色名称"`
 }
 
 func (ts *cms) roleadd(c *gin.Context) {
 	var param roleaddBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -309,16 +331,20 @@ func (ts *cms) roleeditpage(c *gin.Context) {
 }
 
 type roleeditBind struct {
-	ID   int64  `form:"id"  binding:"required"`
-	Name string `form:"name"  binding:"required"`
+	ID   int64  `form:"id"  validate:"required,gt=0" label:"角色编号"`
+	Name string `form:"name"  validate:"required,max=50" label:"角色名称"`
 }
 
 func (ts *cms) roleedit(c *gin.Context) {
 	var param roleeditBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -351,15 +377,19 @@ func (ts *cms) roleedit(c *gin.Context) {
 }
 
 type roledelBind struct {
-	ID int64 `form:"id"  binding:"required"`
+	ID int64 `form:"id"  validate:"required,gt=0" label:"角色编号"`
 }
 
 func (ts *cms) roledel(c *gin.Context) {
 	var param roledelBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -407,21 +437,25 @@ func (ts *cms) changpwdpage(c *gin.Context) {
 }
 
 type pwdBind struct {
-	OldPasswd     string `form:"old_passwd"  binding:"required"`
-	Passwd        string `form:"passwd"  binding:"required"`
-	ConfirmPasswd string `form:"confirm_passwd"  binding:"required"`
+	OldPasswd     string `form:"old_passwd"  validate:"required" label:"旧密码"`
+	Passwd        string `form:"passwd"  validate:"required,min=6,max=20,eqfield=ConfirmPasswd" label:"新密码"`
+	ConfirmPasswd string `form:"confirm_passwd"  validate:"required,min=6,max=20" label:"确认新密码"`
 }
 
 func (ts *cms) pwdedit(c *gin.Context) {
 	var param pwdBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
-	lenPwd := len(param.Passwd)
+	/*lenPwd := len(param.Passwd)
 	if lenPwd < 6 || lenPwd > 20 {
 		kbase.SendErrorJsonStr(c, kcode.PASSWD_TOO_SHORT, callbackName)
 		return
@@ -429,6 +463,11 @@ func (ts *cms) pwdedit(c *gin.Context) {
 
 	if param.Passwd != param.ConfirmPasswd {
 		kbase.SendErrorJsonStr(c, kcode.WRONG_PASSWD_CONFIRM, callbackName)
+		return
+	}*/
+
+	if param.Passwd == param.OldPasswd {
+		kbase.SendErrorJsonStr(c, kcode.WRONG_PASSWD_SAMPLE, callbackName)
 		return
 	}
 
@@ -442,11 +481,6 @@ func (ts *cms) pwdedit(c *gin.Context) {
 	password, err := kutils.PasswordHash(param.Passwd)
 	if err != nil {
 		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
-		return
-	}
-
-	if param.Passwd == param.OldPasswd {
-		kbase.SendErrorJsonStr(c, kcode.WRONG_PASSWD_SAMPLE, callbackName)
 		return
 	}
 
@@ -755,17 +789,21 @@ func (ts *cms) useraddpage(c *gin.Context) {
 }
 
 type useraddBind struct {
-	Name   string `form:"name"  binding:"required"`
-	Passwd string `form:"passwd"  binding:"required"`
-	RoleId int64  `form:"role_id"  binding:"-"`
+	Name   string `form:"name"  validate:"required,max=50" label:"用户名"`
+	Passwd string `form:"passwd"  validate:"required,min=6,max=20" label:"密码"`
+	RoleId int64  `form:"role_id"  validate:"gte=0" label:"角色编号"`
 }
 
 func (ts *cms) useradd(c *gin.Context) {
 	var param useraddBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -774,11 +812,11 @@ func (ts *cms) useradd(c *gin.Context) {
 		return
 	}
 
-	lenPwd := len(param.Passwd)
+	/*lenPwd := len(param.Passwd)
 	if lenPwd < 6 || lenPwd > 20 {
 		kbase.SendErrorJsonStr(c, kcode.PASSWD_TOO_SHORT, callbackName)
 		return
-	}
+	}*/
 
 	obj := kdaocms.CmsAdminUsersObj.GetByName(nil, param.Name)
 	if obj.ID > 0 {
@@ -851,17 +889,21 @@ func (ts *cms) usereditpage(c *gin.Context) {
 }
 
 type usereditBind struct {
-	ID     int64  `form:"id"  binding:"required"`
-	Passwd string `form:"passwd"  binding:"-"`
-	RoleId int64  `form:"role_id"  binding:"-"`
+	ID     int64  `form:"id"  validate:"required,gt=0" label:"用户编号"`
+	Passwd string `form:"passwd"  validate:"-" label:"密码"`
+	RoleId int64  `form:"role_id"  validate:"gte=0" label:"角色编号"`
 }
 
 func (ts *cms) useredit(c *gin.Context) {
 	var param usereditBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -929,7 +971,7 @@ func (ts *cms) useredit(c *gin.Context) {
 }
 
 type userbanBind struct {
-	ID int64 `form:"id"  binding:"required"`
+	ID int64 `form:"id"  validate:"required,gt=0" label:"用户编号"`
 }
 
 func (ts *cms) userban(c *gin.Context) {
@@ -937,9 +979,13 @@ func (ts *cms) userban(c *gin.Context) {
 	var status int64
 
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -967,15 +1013,19 @@ func (ts *cms) userban(c *gin.Context) {
 }
 
 type userdelBind struct {
-	ID int64 `form:"id"  binding:"required"`
+	ID int64 `form:"id"  validate:"required,gt=0" label:"用户编号"`
 }
 
 func (ts *cms) userdel(c *gin.Context) {
 	var param userdelBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1046,31 +1096,28 @@ func (ts *cms) permissionaddpage(c *gin.Context) {
 }
 
 type permissionaddBind struct {
-	Name   string `form:"name"  binding:"required"`
-	Path   string `form:"path"  binding:"-"`
-	PID    string `form:"pid"  binding:"required"`
-	Show   int64  `form:"show"  binding:"required"`
-	Modify int64  `form:"modify"  binding:"required"`
-	Record int64  `form:"record"  binding:"required"`
+	Name   string `form:"name"  validate:"required,max=50" label:"菜单名称"`
+	Path   string `form:"path"  validate:"max=128" label:"路径"`
+	PID    int64  `form:"pid"  validate:"gte=0" label:"父级菜单编号"`
+	Show   int64  `form:"show"  validate:"required,min=1,max=2" label:"导航展示"`
+	Modify int64  `form:"modify"  validate:"required,min=1,max=2" label:"权限传递"`
+	Record int64  `form:"record"  validate:"required,min=1,max=2" label:"记录日志"`
 }
 
 func (ts *cms) permissionadd(c *gin.Context) {
 	var param permissionaddBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
-		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
-		return
-	}
-
-	pid, err := strconv.ParseInt(param.PID, 10, 64)
-	if err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
 		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
 		return
 	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
+		return
+	}
 
-	if pid != 0 && param.Path == "" {
+	if param.PID != 0 && param.Path == "" {
 		kbase.SendErrorJsonStr(c, kcode.WRONG_PERMISSION_PATH_EMPTY, callbackName)
 		return
 	}
@@ -1085,7 +1132,7 @@ func (ts *cms) permissionadd(c *gin.Context) {
 	}
 
 	//顶级父菜单不能同名
-	if pid == 0 {
+	if param.PID == 0 {
 		obj := kdaocms.CmsAdminPermissionsObj.GetByPidName(nil, param.Name, 0)
 		if obj.ID > 0 {
 			kbase.SendErrorJsonStr(c, kcode.WRONG_FIRST_NAME_EXIST, callbackName)
@@ -1120,7 +1167,7 @@ func (ts *cms) permissionadd(c *gin.Context) {
 		param.Record = 0
 	}
 
-	if _, err := kdaocms.CmsAdminPermissionsObj.Insert(nil, param.Name, pid, param.Path, param.Show, param.Modify, param.Record); err != nil {
+	if _, err := kdaocms.CmsAdminPermissionsObj.Insert(nil, param.Name, param.PID, param.Path, param.Show, param.Modify, param.Record); err != nil {
 		kinit.LogError.Println(err)
 		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
 		return
@@ -1145,32 +1192,29 @@ func (ts *cms) permissioneditpage(c *gin.Context) {
 }
 
 type permissioneditBind struct {
-	ID     int64  `form:"id"  binding:"required"`
-	Name   string `form:"name"  binding:"required"`
-	Path   string `form:"path"  binding:"-"`
-	PID    string `form:"pid"  binding:"required"`
-	Show   int64  `form:"show"  binding:"required"`
-	Modify int64  `form:"modify"  binding:"required"`
-	Record int64  `form:"record"  binding:"required"`
+	ID     int64  `form:"id"  validate:"required,gt=0" label:"权限菜单编号"`
+	Name   string `form:"name"  validate:"required,max=50" label:"菜单名称"`
+	Path   string `form:"path"  validate:"max=128" label:"路径"`
+	PID    int64  `form:"pid"  validate:"gte=0" label:"父级菜单编号"`
+	Show   int64  `form:"show"  validate:"required,min=1,max=2" label:"导航展示"`
+	Modify int64  `form:"modify"  validate:"required,min=1,max=2" label:"权限传递"`
+	Record int64  `form:"record"  validate:"required,min=1,max=2" label:"记录日志"`
 }
 
 func (ts *cms) permissionedit(c *gin.Context) {
 	var param permissioneditBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
-		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
-		return
-	}
-
-	pid, err := strconv.ParseInt(param.PID, 10, 64)
-	if err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
 		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
 		return
 	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
+		return
+	}
 
-	if pid != 0 && param.Path == "" {
+	if param.PID != 0 && param.Path == "" {
 		kbase.SendErrorJsonStr(c, kcode.WRONG_PERMISSION_PATH_EMPTY, callbackName)
 		return
 	}
@@ -1185,7 +1229,7 @@ func (ts *cms) permissionedit(c *gin.Context) {
 	}
 
 	//顶级父菜单不能同名
-	if pid == 0 {
+	if param.PID == 0 {
 		obj := kdaocms.CmsAdminPermissionsObj.GetByPidName(nil, param.Name, 0)
 		if obj.ID > 0 && obj.ID != param.ID {
 			kbase.SendErrorJsonStr(c, kcode.WRONG_FIRST_NAME_EXIST, callbackName)
@@ -1219,7 +1263,7 @@ func (ts *cms) permissionedit(c *gin.Context) {
 		param.Record = 0
 	}
 
-	if err := kdaocms.CmsAdminPermissionsObj.UpdateById(nil, param.ID, param.Name, pid, param.Path, param.Show, param.Modify, param.Record); err != nil {
+	if err := kdaocms.CmsAdminPermissionsObj.UpdateById(nil, param.ID, param.Name, param.PID, param.Path, param.Show, param.Modify, param.Record); err != nil {
 		kinit.LogError.Println(err)
 		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
 		return
@@ -1229,15 +1273,19 @@ func (ts *cms) permissionedit(c *gin.Context) {
 }
 
 type permissiondelBind struct {
-	ID int64 `form:"id"  binding:"required"`
+	ID int64 `form:"id"  validate:"required,gt=0" label:"权限菜单编号"`
 }
 
 func (ts *cms) permissiondel(c *gin.Context) {
 	var param permissiondelBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1294,16 +1342,20 @@ func (ts *cms) permissionsofrolepage(c *gin.Context) {
 }
 
 type getpermissionsofroleBind struct {
-	RoleId int64 `form:"role_id"  binding:"required"`
+	RoleId int64 `form:"role_id"  validate:"required,gt=0" label:"角色编号"`
 }
 
 func (ts *cms) getpermissionsofrole(c *gin.Context) {
 	var param getpermissionsofroleBind
 	var objs []kdaocms.CmsAdminPermissions
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1346,16 +1398,20 @@ func (ts *cms) getpermissionsofrole(c *gin.Context) {
 }
 
 type permissionsofrolesaveBind struct {
-	RoleId      int64   `form:"role_id"  binding:"required"`
-	Permissions []int64 `form:"permissions"  binding:"-"`
+	RoleId      int64   `form:"role_id"  validate:"required,gt=0" label:"角色编号"`
+	Permissions []int64 `form:"permissions"  validate:"-" label:"权限编号集合"`
 }
 
 func (ts *cms) permissionsofrolesave(c *gin.Context) {
 	var param permissionsofrolesaveBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1441,15 +1497,19 @@ func (ts *cms) logrecordpage(c *gin.Context) {
 }
 
 type logrecorddelBind struct {
-	Ids []int64 `form:"ids"  binding:"-"`
+	Ids []int64 `form:"ids"  validate:"gt=0" label:"勾选删除的日志记录"`
 }
 
 func (ts *cms) logrecorddel(c *gin.Context) {
 	var param logrecorddelBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1478,15 +1538,19 @@ func (ts *cms) tables(c *gin.Context) {
 }
 
 type optimizeBind struct {
-	TableName string `form:"table"  binding:"required"`
+	TableName string `form:"table"  validate:"required" label:"数据表名"`
 }
 
 func (ts *cms) optimize(c *gin.Context) {
 	var param optimizeBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
 
@@ -1510,21 +1574,26 @@ func (ts *cms) generatepage(c *gin.Context) {
 }
 
 type generateBind struct {
-	DBName    string `form:"db"  binding:"required"`
-	TableName string `form:"table"  binding:"required"`
-	IsSplit   int64  `form:"split"  binding:"required"`
-	IsDivide  int64  `form:"divide"  binding:"required"`
-	IsRead    int64  `form:"read"  binding:"required"`
+	DBName    string `form:"db"  validate:"required" label:"数据库名"`
+	TableName string `form:"table"  validate:"required" label:"数据表名"`
+	IsSplit   int64  `form:"split"  validate:"required,min=1,max=2" label:"分库选项"`
+	IsDivide  int64  `form:"divide"  validate:"required,min=1,max=2" label:"分库取余选项"`
+	IsRead    int64  `form:"read"  validate:"required,min=1,max=2" label:"读写分离选项"`
 }
 
 func (ts *cms) generate(c *gin.Context) {
 	var param generateBind
 	callbackName := kbase.GetParam(c, "callback")
-	if err := c.ShouldBind(&param); err != nil {
+	if err := c.Bind(&param); err != nil {
 		kinit.LogError.Println(err)
-		kbase.SendErrorJsonStr(c, kcode.PARAM_WRONG, callbackName)
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
 		return
 	}
+	if err := kutils.ValidateTranslate(param); err != nil {
+		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
+		return
+	}
+
 	splitBool, divideBool, readBool := false, false, false
 	if param.IsSplit == 1 {
 		splitBool = true
