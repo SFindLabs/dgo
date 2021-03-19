@@ -89,7 +89,7 @@ func NewCaptchaImage(width int, height int, bgColor color.RGBA) *CaptchaImage {
 
 	m := image.NewNRGBA(image.Rect(0, 0, width, height))
 
-	draw.Draw(m, m.Bounds(), &image.Uniform{C: bgColor}, image.ZP, draw.Src)
+	draw.Draw(m, m.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
 
 	return &CaptchaImage{
 		nrgba:  m,
@@ -276,7 +276,7 @@ func (captcha *CaptchaImage) drawBeeline(point1 Point, point2 Point, lineColor c
 		captcha.nrgba.Set(point1.X+2, point1.Y, lineColor)
 		captcha.nrgba.Set(point1.X-2, point1.Y, lineColor)
 		if point1.X == point2.X && point1.Y == point2.Y {
-			return captcha
+			break
 		}
 		e2 := err * 2
 		if e2 > -dy {

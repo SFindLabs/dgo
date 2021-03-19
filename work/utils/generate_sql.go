@@ -608,7 +608,7 @@ func getType(s, name string) string {
 		return "string"
 	}
 	if s == "timestamp" {
-		return "int64"
+		return "string"
 	}
 	if s == "set" {
 		return "string"
