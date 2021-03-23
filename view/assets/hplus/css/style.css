@@ -473,6 +473,12 @@ body.fixed-sidebar.mini-navbar #page-wrapper {
     margin: 0 0 0 70px;
 }
 
+@media screen and (max-width: 768px) {
+    body.fixed-sidebar.mini-navbar #page-wrapper {
+        margin: 0 0 0 0;
+    }
+}
+
 body.body-small.fixed-sidebar.mini-navbar #page-wrapper {
     margin: 0 0 0 70px;
 }
@@ -7524,7 +7530,7 @@ body.skin-3 {
         display: none;
     }
     body.fixed-sidebar.mini-navbar .navbar-static-side {
-        width: 70px;
+        width: 0px;
     }
     .lock-word {
         display: none;
