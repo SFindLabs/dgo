@@ -1,6 +1,5 @@
 {{ define "cms/keys_list.html" }}
 {{ template "header" . }}
-
 <body class="gray-bg">
     <div class="wrapper wrapper-content">
         <div class="ibox-title">
@@ -58,7 +57,7 @@
                                             </td>
                                             <td>{{.ID}}</td>
                                             <td>
-                                                <input type="number" class="form-control" value="{{.SortNum}}" aria-label="" onblur="changeSort({{.ID}}, this.value)">
+                                                <input type="number" class="custom-form-control" value="{{.SortNum}}" aria-label="" onblur="changeSort({{.ID}}, this.value)">
                                             </td>
                                             <td>{{.Name}}</td>
                                             <td>{{.Keyx1}}</td>
