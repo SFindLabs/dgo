@@ -34,11 +34,11 @@ func SaveFile(c *gin.Context, dir string, fileHeader *multipart.FileHeader) (err
 	randNum := kcommon.GetRandomString(6, 0)
 	fileExt := path.Ext(fileHeader.Filename)
 	times := strconv.FormatInt(time.Now().UnixNano(), 10)
-	savePath := fmt.Sprintf("%s%s%s", times, randNum, fileExt)
-	if err := c.SaveUploadedFile(fileHeader, fmt.Sprint(dir, savePath)); err != nil {
+	fileName := fmt.Sprintf("%s%s%s", times, randNum, fileExt)
+	if err := c.SaveUploadedFile(fileHeader, fmt.Sprint(dir, fileName)); err != nil {
 		return err, kcode.FILE_UPLOAD_FAIL, "", ""
 	}
-	return nil, kcode.SUCCESS_STATUS, savePath, fileExt
+	return nil, kcode.SUCCESS_STATUS, fileName, fileExt
 }
 
 func SaveBurstFile(c *gin.Context, dir string, index int64, fileExt string, fileHeader *multipart.FileHeader) (error, int, string, string) {
