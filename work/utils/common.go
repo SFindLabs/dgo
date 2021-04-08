@@ -242,6 +242,9 @@ func XssConvertFunc(srcStr string, isEscape bool) string {
 
 //截取字符串
 func Substr(str string, substr string, count int) string {
+	if str == "" {
+		return ""
+	}
 	s, c := 0, 0
 	ss := str
 	for {
@@ -253,6 +256,8 @@ func Substr(str string, substr string, count int) string {
 			if c > count {
 				break
 			}
+		} else {
+			break
 		}
 	}
 	s -= 1
