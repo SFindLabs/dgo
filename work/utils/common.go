@@ -242,9 +242,6 @@ func XssConvertFunc(srcStr string, isEscape bool) string {
 
 //截取字符串
 func Substr(str string, substr string, count int) string {
-	if str == "" {
-		return ""
-	}
 	s, c := 0, 0
 	ss := str
 	for {
@@ -253,15 +250,18 @@ func Substr(str string, substr string, count int) string {
 		if i > -1 {
 			ss = string([]rune(ss)[i+1:])
 			c++
-			if c > count {
+			if c >= count {
 				break
 			}
 		} else {
 			break
 		}
 	}
-	s -= 1
-	return string([]rune(str)[:s])
+	if c >= count {
+		s -= 1
+		return string([]rune(str)[:s])
+	}
+	return str
 }
 
 //获取中文字符串的子串字符位置
