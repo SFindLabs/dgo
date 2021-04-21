@@ -110,26 +110,46 @@
         });
 
         layer.confirm("确定删除?", {
-            btn: ['确定','取消']
+            btn: ['确定','取消'],
+            success:function(){
+                this.enterEsc = function (event) {
+                    if (event.keyCode === 13) {
+                        delete_check_func(ids);
+                        return false;
+                    } else if(event.keyCode === 27){
+                        layer.close(layer.index);
+                        return false;
+                    }
+                };
+                $(document).on('keydown', this.enterEsc);
+            },
+            end:function(){
+                $(document).off('keydown',this.enterEsc);
+            }
         }, function() {
-            jQuery.ajaxSettings.traditional = true;
-            $.post("/logrecorddel", {ids:ids},function (res) {
-                var jsonData = $.parseJSON(res);
-                if(jsonData.status !== 200 && jsonData.status !== 20023){
-                    layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
-                } else if(jsonData.status === 20023) {
-                    window.location.href = "/nopermission";
-                } else {
-                    layer.msg(jsonData.message, {
-                        icon: 1,
-                        time: 1000,
-                        title: "提示",
-                        end:function () {
-                            window.location.reload();
-                        }
-                    });
-                }
-            });
+            delete_check_func(ids);
+        });
+    }
+
+    function delete_check_func(ids) {
+        jQuery.ajaxSettings.traditional = true;
+        $.post("/logrecorddel", {ids:ids},function (res) {
+            var jsonData = $.parseJSON(res);
+            if(jsonData.status !== 200 && jsonData.status !== 20023){
+                layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
+            } else if(jsonData.status === 20023) {
+                window.location.href = "/nopermission";
+            } else {
+                layer.close(layer.index);
+                layer.msg(jsonData.message, {
+                    icon: 1,
+                    time: 1000,
+                    title: "提示",
+                    end:function () {
+                        window.location.reload();
+                    }
+                });
+            }
         });
     }
 </script>
