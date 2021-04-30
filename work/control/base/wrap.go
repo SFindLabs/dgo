@@ -88,15 +88,9 @@ func CheckLogin(c *gin.Context) (err error, code int) {
 		return errors.New("cookie is expires"), 1
 	}
 	maxAge, _ := kinit.Conf.GetInt("session.max_age")
-	newCookie := &http.Cookie{
-		Name:     cookie.Name,
-		Value:    cookie.Value,
-		Path:     cookie.Path,
-		HttpOnly: cookie.HttpOnly,
-		MaxAge:   maxAge,
-		Secure:   cookie.Secure,
-	}
-	c.Writer.Header().Set("Set-Cookie", newCookie.String())
+	cookie.Path = "/"
+	cookie.MaxAge = maxAge
+	c.Writer.Header().Set("Set-Cookie", cookie.String())
 
 	//检查session
 	session := sessions.Default(c)

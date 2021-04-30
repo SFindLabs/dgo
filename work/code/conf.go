@@ -8,7 +8,7 @@ import (
 // 配置参数
 var IS_TEST_SERVER int = 0
 
-func init() {
+func InitConfParam() {
 	var err error
 	IS_TEST_SERVER, err = kinit.Conf.GetInt("server.is_test")
 	if err != nil {

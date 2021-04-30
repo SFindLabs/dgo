@@ -33,11 +33,6 @@ func init() {
 	var err error
 	runtime.GOMAXPROCS(runtime.NumCPU()) //多核设置
 
-	Conf, err = conf.NewJsonConf(CONFIG_PATH)
-	if err != nil {
-		log.Panic("conf parse fail:", err)
-	}
-
 	LogError = klog.Error
 	LogWarn = klog.Warn
 	LogInfo = klog.Info
@@ -50,6 +45,9 @@ func init() {
 }
 
 func InitConf(confFile string) {
+	if confFile == "" {
+		confFile = CONFIG_PATH
+	}
 	tmpConf, err := conf.NewJsonConf(confFile)
 	if err != nil {
 		log.Panic("conf parse fail:", err)

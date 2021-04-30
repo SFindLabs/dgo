@@ -17,10 +17,6 @@ type DataIStruct struct {
 	InnerException string      `json:"innerException"`
 }
 
-func init() {
-
-}
-
 func CheckGetPostParam(c *gin.Context, key string) (string, bool) {
 	if value, ok := c.GetQuery(key); ok {
 		return value, ok

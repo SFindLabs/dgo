@@ -4,6 +4,7 @@ import (
 	kruntime "dgo/framework/tools/runtime"
 	kinit "dgo/work/base/initialize"
 	kroute "dgo/work/base/route"
+	kcode "dgo/work/code"
 	kcms "dgo/work/control/cms"
 	"fmt"
 	"github.com/urfave/cli"
@@ -16,7 +17,6 @@ var (
 	app *cli.App
 )
 
-
 func init() {
 	app = cli.NewApp()
 	app.UseShortOptionHandling = true
@@ -25,11 +25,10 @@ func init() {
 	app.Copyright = "Copyright 2013-2020 The dgo Authors"
 	app.Commands = []cli.Command{
 		{
-			Name:  "admin",
-			Usage: "run admin",
-			Flags: []cli.Flag{
-			},
-			Action:admin,
+			Name:   "admin",
+			Usage:  "run admin",
+			Flags:  []cli.Flag{},
+			Action: admin,
 		},
 	}
 
@@ -42,7 +41,6 @@ func init() {
 	}
 }
 
-
 func main() {
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -50,10 +48,12 @@ func main() {
 	}
 }
 
-
 func admin(c *cli.Context) error {
 	kruntime.MainGetPanic(func() {
 		kruntime.Pid("admin.pid")
+
+		kinit.InitConf("")
+		kcode.InitConfParam()
 
 		if runtime.GOOS != "windows" {
 			kinit.InitLog("admin")
