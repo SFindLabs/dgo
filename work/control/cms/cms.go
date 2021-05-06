@@ -1333,12 +1333,18 @@ func (ts *cms) permissionsofrolepage(c *gin.Context) {
 		return
 	}
 
+	//zTree父子关联选项
+	types := kbase.GetParam(c, "selectCheckBoxType")
+	if types == "" {
+		types = "1"
+	}
+
 	userId := c.GetInt64("user")
 	if id == 1 && userId != 1 {
 		c.Redirect(http.StatusFound, "/nopermission")
 		return
 	}
-	kbase.RenderTokenHtml(c, "cms/role_permission.html", gin.H{"role_id": id})
+	kbase.RenderTokenHtml(c, "cms/role_permission.html", gin.H{"role_id": id, "selectCheckBoxType": types})
 }
 
 type getpermissionsofroleBind struct {

@@ -7,6 +7,19 @@
     <div class="ibox-title">
         权限管理 / <a href="/role">角色管理</a> / <a onclick="window.location.reload()">权限分配</a>
     </div>
+    <div role="form" class="form-inline">
+        <div class="ibox-title">
+            <div class="form-group">
+                <label for="name">勾选关联状态：</label>
+                <select class="form-control selectCheckBoxType" aria-label="">
+                    <option value="1" {{if eq .selectCheckBoxType "1"}}selected{{end}} title="父节点勾选或者取消会影响子节点，子节点初始勾选或者全部取消会影响父节点">父子节点关联</option>
+                    <option value="2" {{if eq .selectCheckBoxType "2"}}selected{{end}} title="父节点勾选或者取消不影响子节点，子节点初始勾选或者全部取消会影响父节点">只影响父级节点</option>
+                    <option value="3" {{if eq .selectCheckBoxType "3"}}selected{{end}} title="父节点勾选或者取消会影响子节点，子节点勾选或者取消不影响父节点">只影响子级节点</option>
+                    <option value="4" {{if eq .selectCheckBoxType "4"}}selected{{end}} title="父节点勾选或者取消不影响子节点，子节点勾选或者取消不影响父节点">父子节点不关联</option>
+                </select>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-sm-12">
             <div class="ibox float-e-margins">
@@ -33,17 +46,38 @@
 <script src="/assets/ztree/js/jquery.ztree.exedit.js"></script>
 
 <script>
-    var setting = {
-        view: {},
-       //Y:勾选（参数：p:影响父节点），N：不勾（参数s：影响子节点）[p 和 s 为参数]
-        check: {enable: true, chkboxType: {"Y":"s", "N":"s"}},
-        data: {simpleData: {enable: true, pIdKey : "pid"}},
-        callback:{
-            onCheck:onCheck
-        }
-    };
+    $(".selectCheckBoxType").on('change', function(){
+        var types = $(".selectCheckBoxType option:selected").val();
+        window.location.href = "?id={{.role_id}}&selectCheckBoxType=" + types;
+    });
+
     var ids = Array();
     $(function(){
+        var setting = {
+            view: {},
+            check: {enable: true},
+            data: {simpleData: {enable: true, pIdKey : "pid"}},
+            callback:{
+                onCheck:onCheck
+            }
+        };
+
+        //Y:勾选（参数：p:影响父节点），N：不勾（参数s：影响子节点）[p 和 s 为参数]
+        switch({{.selectCheckBoxType}}){
+            case "1":
+                setting.check.chkboxType = {"Y":"ps", "N":"ps"};
+                break;
+            case "2":
+                setting.check.chkboxType = {"Y":"p", "N":"p"};
+                break;
+            case "3":
+                setting.check.chkboxType = {"Y":"s", "N":"s"};
+                break;
+            case "4":
+                setting.check.chkboxType = {"Y":"", "N":""};
+                break;
+        }
+
         $.ajax({
             type: 'POST',
             dataType: "json",
