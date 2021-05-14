@@ -90,6 +90,7 @@ func CheckLogin(c *gin.Context) (err error, code int) {
 	maxAge, _ := kinit.Conf.GetInt("session.max_age")
 	cookie.Path = "/"
 	cookie.MaxAge = maxAge
+	cookie.HttpOnly = true
 	c.Writer.Header().Set("Set-Cookie", cookie.String())
 
 	//检查session
