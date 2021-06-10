@@ -62,15 +62,11 @@ func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userName string,
 		tx, _ = kinit.GetMysqlConnect("")
 	}
 
-	var id []int64
 	tx = tx.Model(CmsAdminOptionLog{})
 	if userName != "" {
 		tx = tx.Where("user_name like ?", "%"+userName+"%")
 	}
-	tx.Limit(1).Offset((page-1)*pageSize).Order("id desc").Pluck("id", &id)
-	if len(id) > 0 {
-		tx.Where("id <= ?", id[0]).Order("id desc").Limit(pageSize).Find(&objs)
-	}
+	tx.Limit(pageSize).Offset((page - 1) * pageSize).Order("id desc").Find(&objs)
 	return objs
 }
 
