@@ -1483,12 +1483,12 @@ func (ts *cms) permissionsofrolesave(c *gin.Context) {
 
 func (ts *cms) logrecordpage(c *gin.Context) {
 	param, _ := c.GetQuery("searchName")
-	count, userId := kdaocms.CmsAdminOptionLogObj.CountByUserName(nil, param)
+	count := kdaocms.CmsAdminOptionLogObj.CountByUserName(nil, param)
 	params := map[string]interface{}{
 		"searchName": param,
 	}
 	paginate, toUrl, toPage, pageSize := kutils.Paginate(c, count, params)
-	objs := kdaocms.CmsAdminOptionLogObj.GetByUserName(nil, count, userId, int64(toPage), int64(pageSize))
+	objs := kdaocms.CmsAdminOptionLogObj.GetByUserName(nil, count, param, int64(toPage), int64(pageSize))
 	countNum := len(objs)
 	for i := 0; i < countNum; i++ {
 		objs[i].CreatedAt = kutils.FormatTime(objs[i].CreatedAt)

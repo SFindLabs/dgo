@@ -41,22 +41,19 @@ func (CmsAdminOptionLog) Insert(tx *jgorm.DB, userName string, userId int64, pat
 	return obj, nil
 }
 
-func (CmsAdminOptionLog) CountByUserName(tx *jgorm.DB, userName string) (int, []int64) {
+func (CmsAdminOptionLog) CountByUserName(tx *jgorm.DB, userName string) (count int) {
 	if tx == nil {
 		tx, _ = kinit.GetMysqlConnect("")
 	}
-	count := 0
-	var adminIds []int64
+	tx = tx.Model(CmsAdminOptionLog{})
 	if userName != "" {
-		tx.Model(CmsAdminUsers{}).Where("name like ?", "%"+userName+"%").Pluck("id", &adminIds)
-		count = len(adminIds)
-	} else {
-		tx.Model(CmsAdminOptionLog{}).Count(&count)
+		tx = tx.Where("user_name like ?", "%"+userName+"%")
 	}
-	return count, adminIds
+	tx.Count(&count)
+	return
 }
 
-func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userId []int64, page int64, pageSize int64) []CmsAdminOptionLog {
+func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userName string, page int64, pageSize int64) []CmsAdminOptionLog {
 	var objs []CmsAdminOptionLog
 	if count == 0 {
 		return objs
@@ -66,10 +63,11 @@ func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userId []int64, 
 	}
 
 	var id []int64
-	if len(userId) != 0 {
-		tx = tx.Where("user_id in (?)", userId)
+	tx = tx.Model(CmsAdminOptionLog{})
+	if userName != "" {
+		tx = tx.Where("user_name like ?", "%"+userName+"%")
 	}
-	tx.Model(CmsAdminOptionLog{}).Limit(1).Offset((page-1)*pageSize).Order("id desc").Pluck("id", &id)
+	tx.Limit(1).Offset((page-1)*pageSize).Order("id desc").Pluck("id", &id)
 	if len(id) > 0 {
 		tx.Where("id <= ?", id[0]).Order("id desc").Limit(pageSize).Find(&objs)
 	}
