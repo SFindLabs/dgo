@@ -103,6 +103,11 @@ func UrlBaseDecode(str string) string {
 //---------------------------AES ECB---------------------------------
 
 func AesEncryptECB(origData []byte, key []byte) (encrypted []byte, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			err = errors.New(fmt.Sprintf("AesEncryptECB fail:%v", err))
+		}
+	}()
 	block, err := aes.NewCipher(generateKey(key))
 	if err != nil {
 		return
@@ -124,6 +129,11 @@ func AesEncryptECB(origData []byte, key []byte) (encrypted []byte, err error) {
 }
 
 func AesDecryptECB(encrypted []byte, key []byte) (decrypted []byte, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			err = errors.New(fmt.Sprintf("AesDecryptECB fail:%v", err))
+		}
+	}()
 	block, err := aes.NewCipher(generateKey(key))
 	if err != nil {
 		return

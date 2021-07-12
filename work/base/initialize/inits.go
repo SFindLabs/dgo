@@ -16,7 +16,17 @@ import (
 	"strings"
 )
 
+//配置文件路径
 const CONFIG_PATH = "conf/config.json"
+
+//默认数据库标识
+const DEFAULT_DB = "default"
+
+//数据库主库
+const MASTER_DB = "write"
+
+//数据库从库
+const SLAVE_DB = "read"
 
 var Conf *conf.JsonConf
 
@@ -97,9 +107,9 @@ func InitMysql() {
 	if isTest == 1 {
 		defaultConnect.LogMode(true)
 	}
-	GorMMap["default"] = map[string]map[int64]map[int64]*gorm.DB{"write": {0: {0: defaultConnect}}}
+	GorMMap[DEFAULT_DB] = map[string]map[int64]map[int64]*gorm.DB{MASTER_DB: {0: {0: defaultConnect}}}
 
-	result, err := Conf.GetArrayMap("mysql", "host", "port", "user", "password", "db", "max_life_time", "max_idle_conn", "max_open_conn")
+	result, err := Conf.GetArrayMap("mysql", SLAVE_DB, "host", "port", "user", "password", "db", "max_life_time", "max_idle_conn", "max_open_conn")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -198,9 +208,9 @@ func InitRedis() {
 	if err != nil {
 		log.Panic(err)
 	}
-	RedisPoolMap["default"] = map[string]map[int64]map[int64]*kredis.RedisPool{"write": {0: {0: defaultRedisPool}}}
+	RedisPoolMap[DEFAULT_DB] = map[string]map[int64]map[int64]*kredis.RedisPool{MASTER_DB: {0: {0: defaultRedisPool}}}
 
-	result, err := Conf.GetArrayMap("redis", "host", "port", "auth", "db", "max_idle", "max_active", "idle_timeout")
+	result, err := Conf.GetArrayMap("redis", SLAVE_DB, "host", "port", "auth", "db", "max_idle", "max_active", "idle_timeout")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -279,13 +289,13 @@ func InitRedis() {
 func GetMysqlConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 	var dbId int64 = 0
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	switch len(dbIds) {
 	case 1:
 		dbId = dbIds[0]
 	}
-	if connect, ok := (((GorMMap[name])["write"])[dbId])[0]; ok {
+	if connect, ok := (((GorMMap[name])[MASTER_DB])[dbId])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d mysql write connect not exist", name, dbId)
@@ -300,7 +310,7 @@ func GetMysqlConnect(name string, dbIds ...int64) (*gorm.DB, error) {
  */
 func GetMysqlReadConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	var dbId, readIndex int64 = 0, 0
 	switch len(dbIds) {
@@ -311,11 +321,11 @@ func GetMysqlReadConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 		readIndex = dbIds[1]
 	}
 
-	if connect, ok := (((GorMMap[name])["read"])[dbId])[readIndex]; ok {
+	if connect, ok := (((GorMMap[name])[SLAVE_DB])[dbId])[readIndex]; ok {
 		return connect, nil
 	}
 	LogError.Println(fmt.Sprintf("the %s %d mysql read connect not exist", name, dbId))
-	if connect, ok := (((GorMMap[name])["write"])[dbId])[0]; ok {
+	if connect, ok := (((GorMMap[name])[MASTER_DB])[dbId])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d mysql connect not exist", name, dbId)
@@ -330,13 +340,13 @@ func GetMysqlReadConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 func GetRedisConnect(name string, dbIds ...int64) (*kredis.RedisPool, error) {
 	var dbId int64 = 0
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	switch len(dbIds) {
 	case 1:
 		dbId = dbIds[0]
 	}
-	if connect, ok := (((RedisPoolMap[name])["write"])[dbId])[0]; ok {
+	if connect, ok := (((RedisPoolMap[name])[MASTER_DB])[dbId])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d redis pool connect not exist", name, dbId)
@@ -351,7 +361,7 @@ func GetRedisConnect(name string, dbIds ...int64) (*kredis.RedisPool, error) {
  */
 func GetRedisReadConnect(name string, dbIds ...int64) (*kredis.RedisPool, error) {
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	var dbId, readIndex int64 = 0, 0
 	switch len(dbIds) {
@@ -361,11 +371,11 @@ func GetRedisReadConnect(name string, dbIds ...int64) (*kredis.RedisPool, error)
 		dbId = dbIds[0]
 		readIndex = dbIds[1]
 	}
-	if connect, ok := (((RedisPoolMap[name])["read"])[dbId])[readIndex]; ok {
+	if connect, ok := (((RedisPoolMap[name])[SLAVE_DB])[dbId])[readIndex]; ok {
 		return connect, nil
 	}
 	LogError.Println(fmt.Sprintf("the %s %d redis read pool connect not exist", name, dbId))
-	if connect, ok := (((RedisPoolMap[name])["write"])[dbId])[0]; ok {
+	if connect, ok := (((RedisPoolMap[name])[MASTER_DB])[dbId])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d redis pool connect not exist", name, dbId)
@@ -381,18 +391,18 @@ func GetRedisReadConnect(name string, dbIds ...int64) (*kredis.RedisPool, error)
 func GetMysqlDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 	var dbId int64 = 0
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	switch len(dbIds) {
 	case 1:
 		dbId = dbIds[0]
 	}
-	totalDb := int64(len((GorMMap[name])["write"]))
+	totalDb := int64(len((GorMMap[name])[MASTER_DB]))
 	if totalDb == 0 {
 		return nil, errors.New(fmt.Sprintf("the %s mysql write connect not exist", name))
 	}
 	dbIndex := dbId % totalDb
-	if connect, ok := (((GorMMap[name])["write"])[dbIndex])[0]; ok {
+	if connect, ok := (((GorMMap[name])[MASTER_DB])[dbIndex])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d mysql write connect not exist", name, dbIndex)
@@ -407,7 +417,7 @@ func GetMysqlDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
  */
 func GetMysqlReadDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	var dbId, readIndex, dbIndex int64 = 0, 0, 0
 	switch len(dbIds) {
@@ -417,10 +427,10 @@ func GetMysqlReadDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 		dbId = dbIds[0]
 		readIndex = dbIds[1]
 	}
-	totalDb := int64(len((GorMMap[name])["read"]))
+	totalDb := int64(len((GorMMap[name])[SLAVE_DB]))
 	if totalDb > 0 {
 		dbIndex = dbId % totalDb
-		if connect, ok := (((GorMMap[name])["read"])[dbIndex])[readIndex]; ok {
+		if connect, ok := (((GorMMap[name])[SLAVE_DB])[dbIndex])[readIndex]; ok {
 			return connect, nil
 		}
 		LogError.Println(fmt.Sprintf("the %s %d mysql read connect not exist", name, dbIndex))
@@ -428,12 +438,12 @@ func GetMysqlReadDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 		LogError.Println(fmt.Sprintf("the %s mysql read connect not exist", name))
 	}
 
-	totalDb = int64(len((GorMMap[name])["write"]))
+	totalDb = int64(len((GorMMap[name])[MASTER_DB]))
 	if totalDb == 0 {
 		return nil, errors.New(fmt.Sprintf("the %s mysql connect not exist", name))
 	}
 	dbIndex = dbId % totalDb
-	if connect, ok := (((GorMMap[name])["write"])[dbIndex])[0]; ok {
+	if connect, ok := (((GorMMap[name])[MASTER_DB])[dbIndex])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d mysql connect not exist", name, dbIndex)
@@ -448,18 +458,18 @@ func GetMysqlReadDivideConnect(name string, dbIds ...int64) (*gorm.DB, error) {
 func GetRedisDivideConnect(name string, dbIds ...int64) (*kredis.RedisPool, error) {
 	var dbId int64 = 0
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	switch len(dbIds) {
 	case 1:
 		dbId = dbIds[0]
 	}
-	totalRedis := int64(len((RedisPoolMap[name])["write"]))
+	totalRedis := int64(len((RedisPoolMap[name])[MASTER_DB]))
 	if totalRedis == 0 {
 		return nil, errors.New(fmt.Sprintf("the %s redis pool connect not exist", name))
 	}
 	dbIndex := dbId % totalRedis
-	if connect, ok := (((RedisPoolMap[name])["write"])[dbIndex])[0]; ok {
+	if connect, ok := (((RedisPoolMap[name])[MASTER_DB])[dbIndex])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d redis pool connect not exist", name, dbIndex)
@@ -474,7 +484,7 @@ func GetRedisDivideConnect(name string, dbIds ...int64) (*kredis.RedisPool, erro
  */
 func GetRedisReadDivideConnect(name string, dbIds ...int64) (*kredis.RedisPool, error) {
 	if name == "" {
-		name = "default"
+		name = DEFAULT_DB
 	}
 	var dbId, readIndex, dbIndex int64 = 0, 0, 0
 	switch len(dbIds) {
@@ -484,10 +494,10 @@ func GetRedisReadDivideConnect(name string, dbIds ...int64) (*kredis.RedisPool, 
 		dbId = dbIds[0]
 		readIndex = dbIds[1]
 	}
-	totalRedis := int64(len((RedisPoolMap[name])["read"]))
+	totalRedis := int64(len((RedisPoolMap[name])[SLAVE_DB]))
 	if totalRedis > 0 {
 		dbIndex = dbId % totalRedis
-		if connect, ok := (((RedisPoolMap[name])["read"])[dbIndex])[readIndex]; ok {
+		if connect, ok := (((RedisPoolMap[name])[SLAVE_DB])[dbIndex])[readIndex]; ok {
 			return connect, nil
 		}
 		LogError.Println(fmt.Sprintf("the %s %d redis read pool connect not exist", name, dbIndex))
@@ -495,12 +505,12 @@ func GetRedisReadDivideConnect(name string, dbIds ...int64) (*kredis.RedisPool, 
 		LogError.Println(fmt.Sprintf("the %s redis read pool connect not exist", name))
 	}
 
-	totalRedis = int64(len((RedisPoolMap[name])["write"]))
+	totalRedis = int64(len((RedisPoolMap[name])[MASTER_DB]))
 	if totalRedis == 0 {
 		return nil, errors.New(fmt.Sprintf("the %s redis pool connect not exist", name))
 	}
 	dbIndex = dbId % totalRedis
-	if connect, ok := (((RedisPoolMap[name])["write"])[dbIndex])[0]; ok {
+	if connect, ok := (((RedisPoolMap[name])[MASTER_DB])[dbIndex])[0]; ok {
 		return connect, nil
 	}
 	err := fmt.Sprintf("the %s %d redis pool connect not exist", name, dbIndex)

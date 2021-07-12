@@ -79,7 +79,7 @@ func (ts *JsonConf) GetMap(path string) (map[string]string, error) {
 	return result, nil
 }
 
-func (ts *JsonConf) GetArrayMap(path string, rmPath ...string) (result []map[string]map[string]string, err error) {
+func (ts *JsonConf) GetArrayMap(path string, slave string, rmPath ...string) (result []map[string]map[string]string, err error) {
 	cMap, err := ts.Container.Path(path).ChildrenMap()
 	if err != nil {
 		return
@@ -89,8 +89,8 @@ func (ts *JsonConf) GetArrayMap(path string, rmPath ...string) (result []map[str
 		rmMap[val] = true
 	}
 	for key, _ := range cMap {
-		if key == "read" {
-			res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), true, rmPath...)
+		if key == slave {
+			res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), true, slave, rmPath...)
 			if mapErr != nil {
 				err = mapErr
 				return
@@ -98,7 +98,7 @@ func (ts *JsonConf) GetArrayMap(path string, rmPath ...string) (result []map[str
 			result = append(result, res)
 		} else {
 			if _, ok := rmMap[key]; !ok {
-				res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), false, rmPath...)
+				res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), false, slave, rmPath...)
 				if mapErr != nil {
 					err = mapErr
 					return
@@ -110,7 +110,7 @@ func (ts *JsonConf) GetArrayMap(path string, rmPath ...string) (result []map[str
 	return
 }
 
-func (ts *JsonConf) GetArrayToMap(path string, isRead bool, str ...string) (map[string]map[string]string, error) {
+func (ts *JsonConf) GetArrayToMap(path string, isRead bool, slave string, str ...string) (map[string]map[string]string, error) {
 
 	result := make(map[string]map[string]string)
 	if isRead {
@@ -145,7 +145,7 @@ func (ts *JsonConf) GetArrayToMap(path string, isRead bool, str ...string) (map[
 			childMapIndex = tmpIndex
 		}
 		for key, child := range childMap {
-			if key == "read" {
+			if key == slave {
 				arrChild, _ := ts.Container.Path(fmt.Sprintf("%s.read", path)).Children()
 				for arrIndex, arrVal := range arrChild {
 					arrIndexKey := fmt.Sprintf("%s_read_%d_%d", nameIndex[0], childMapIndex, arrIndex)

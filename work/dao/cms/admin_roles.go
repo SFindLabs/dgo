@@ -117,3 +117,26 @@ func (CmsAdminRoles) GetIdRoleHasPermissions(tx *jgorm.DB, path string) []RoleId
 	tx.Raw(sql).Scan(&ids)
 	return ids
 }
+
+func (CmsAdminRoles) CountByAll(tx *jgorm.DB) (count int) {
+	if tx == nil {
+		tx, _ = kinit.GetMysqlConnect("")
+	}
+	tx = tx.Model(CmsAdminRoles{})
+	tx.Count(&count)
+	return
+}
+
+func (CmsAdminRoles) GetByAll(tx *jgorm.DB, count int, page int64, pageSize int64) []CmsAdminRoles {
+	var objs []CmsAdminRoles
+	if count == 0 {
+		return objs
+	}
+	if tx == nil {
+		tx, _ = kinit.GetMysqlConnect("")
+	}
+
+	tx = tx.Model(CmsAdminRoles{})
+	tx.Limit(pageSize).Offset((page - 1) * pageSize).Find(&objs)
+	return objs
+}

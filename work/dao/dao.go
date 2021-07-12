@@ -12,16 +12,17 @@ import (
 	"time"
 )
 
-func ScanData(tx *jgorm.DB, name string, dbId int64, sql string, srcValues ...interface{}) []map[string]interface{} {
+func ScanData(tx *jgorm.DB, name string, dbId int64, sql string, srcValues ...interface{}) (records []map[string]interface{}, err error) {
 	if tx == nil {
-		tx, _ = kinit.GetMysqlConnect(name, dbId)
+		tx, err = kinit.GetMysqlConnect(name, dbId)
+		if err != nil {
+			return
+		}
 	}
-	records := make([]map[string]interface{}, 0)
-
 	rows, err := tx.Raw(sql, srcValues...).Rows()
 	if err != nil {
 		kinit.LogError.Println(err)
-		return records
+		return
 	}
 	defer func() {
 		_ = rows.Close()
@@ -30,12 +31,12 @@ func ScanData(tx *jgorm.DB, name string, dbId int64, sql string, srcValues ...in
 	columns, err := rows.Columns()
 	if err != nil {
 		kinit.LogError.Println(err)
-		return records
+		return
 	}
 	colTypes, err := rows.ColumnTypes()
 	if err != nil {
 		kinit.LogError.Println(err)
-		return records
+		return
 	}
 
 	count := len(columns)
@@ -46,10 +47,10 @@ func ScanData(tx *jgorm.DB, name string, dbId int64, sql string, srcValues ...in
 		for i := 0; i < count; i++ {
 			scanArgs[i] = &values[i]
 		}
-		err := rows.Scan(scanArgs...)
+		err = rows.Scan(scanArgs...)
 		if err != nil {
 			kinit.LogError.Println(err)
-			return records
+			return
 		}
 
 		entry := make(map[string]interface{})
@@ -114,7 +115,7 @@ func ScanData(tx *jgorm.DB, name string, dbId int64, sql string, srcValues ...in
 		records = append(records, entry)
 	}
 
-	return records
+	return
 }
 
 func InsertOne(tx *jgorm.DB, name string, dbId int64, tableName string, insertMap map[string]interface{}) (int64, error) {

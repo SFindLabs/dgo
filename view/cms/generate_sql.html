@@ -22,7 +22,7 @@
 <body class="gray-bg">
     <div class="wrapper wrapper-content">
         <div class="ibox-title">
-            权限管理 / <a href="/tables">数据表列表</a> / <a onclick="window.location.reload()">model生成器</a>
+            权限管理 / <a href="/tables?dbName={{.dbName}}">数据表列表</a> / <a onclick="window.location.reload()">model生成器</a>
         </div>
         <div class="row">
             <div class="col-sm-12">
@@ -75,7 +75,7 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-3">
                                     <button class="btn btn-sm btn-primary" onclick="generate()">生成</button>
-                                    <a href="/tables" class="btn btn-sm btn-white">取消</a>
+                                    <a href="/tables?dbName={{.dbName}}" class="btn btn-sm btn-white">取消</a>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -95,7 +95,7 @@
 {{ template "footer" . }}
 <script>
     $('.db_name').on('change', function () {
-        window.location.href = "/generatepage?searchName=" + $(this).val();
+        window.location.href = "/generatepage?searchName=" + $(this).val() + "&dbName={{.dbName}}";
     });
 
     function generate() {
@@ -104,7 +104,7 @@
         var split = $("input[name='is_split_table']:checked").val();
         var divide = $("input[name='is_divide']:checked").val();
         var read = $("input[name='is_read_table']:checked").val();
-        $.post("/tables/generate", {db: db, table: table, split:split,divide:divide,read:read}, function (res) {
+        $.post("/tables/generate", {db: db, table: table, split:split,divide:divide,read:read, dbName:{{.dbName}}}, function (res) {
             var jsonData = $.parseJSON(res);
             if(jsonData.status !== 200 && jsonData.status !== 20023){
                 layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});

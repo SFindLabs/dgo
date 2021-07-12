@@ -164,3 +164,32 @@ func (CmsAdminUsers) GetIdUserHasRole(tx *jgorm.DB, userId int64) RoleIdBlock {
 	tx.Raw(sql).Scan(&id)
 	return id
 }
+
+func (CmsAdminUsers) CountByName(tx *jgorm.DB, name string) (count int) {
+	if tx == nil {
+		tx, _ = kinit.GetMysqlConnect("")
+	}
+	tx = tx.Model(CmsAdminUsers{})
+	if name != "" {
+		tx = tx.Where("name like ?", "%"+name+"%")
+	}
+	tx.Count(&count)
+	return
+}
+
+func (CmsAdminUsers) GetByAllName(tx *jgorm.DB, count int, name string, page int64, pageSize int64) []CmsAdminUsers {
+	var objs []CmsAdminUsers
+	if count == 0 {
+		return objs
+	}
+	if tx == nil {
+		tx, _ = kinit.GetMysqlConnect("")
+	}
+
+	tx = tx.Model(CmsAdminUsers{})
+	if name != "" {
+		tx = tx.Where("name like ?", "%"+name+"%")
+	}
+	tx.Limit(pageSize).Offset((page - 1) * pageSize).Find(&objs)
+	return objs
+}

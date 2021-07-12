@@ -30,6 +30,7 @@ type cms struct {
 func NewCms() *cms {
 	return &cms{}
 }
+
 func (ts *cms) Load() []kroute.RouteWrapStruct {
 	m := make([]kroute.RouteWrapStruct, 0)
 	//登录相关
@@ -268,12 +269,19 @@ func (ts *cms) userbanshowpage(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 
 func (ts *cms) rolepage(c *gin.Context) {
-	objs := kdaocms.CmsAdminRolesObj.GetAll(nil)
-	count := len(objs)
-	for i := 0; i < count; i++ {
+	count := kdaocms.CmsAdminRolesObj.CountByAll(nil)
+	paginate, toUrl, toPage, pageSize := kutils.Paginate(c, count, map[string]interface{}{})
+	objs := kdaocms.CmsAdminRolesObj.GetByAll(nil, count, int64(toPage), int64(pageSize))
+	countNum := len(objs)
+	for i := 0; i < countNum; i++ {
 		objs[i].CreatedAt = kutils.FormatTime(objs[i].CreatedAt)
 	}
-	kbase.RenderTokenHtml(c, "cms/role_list.html", gin.H{"lists": objs})
+	kbase.RenderTokenHtml(c, "cms/role_list.html", gin.H{
+		"lists":    objs,
+		"paginate": paginate,
+		"toUrl":    toUrl,
+		"count":    countNum,
+	})
 }
 
 func (ts *cms) roleaddpage(c *gin.Context) {
@@ -765,15 +773,23 @@ func (ts *cms) picburstmerge(c *gin.Context) {
 
 func (ts *cms) userpage(c *gin.Context) {
 	searchName := kbase.GetParam(c, "search_name")
-	objs := kdaocms.CmsAdminUsersObj.GetAllOrByName(nil, searchName)
-	count := len(objs)
-	for i := 0; i < count; i++ {
+	count := kdaocms.CmsAdminUsersObj.CountByName(nil, searchName)
+	params := map[string]interface{}{
+		"search_name": searchName,
+	}
+	paginate, toUrl, toPage, pageSize := kutils.Paginate(c, count, params)
+	objs := kdaocms.CmsAdminUsersObj.GetByAllName(nil, count, searchName, int64(toPage), int64(pageSize))
+	countNum := len(objs)
+	for i := 0; i < countNum; i++ {
 		objs[i].CreatedAt = kutils.FormatTime(objs[i].CreatedAt)
 		objs[i].LoginAt = kutils.FormatTime(objs[i].LoginAt)
 	}
 	kbase.RenderTokenHtml(c, "cms/user_list.html", gin.H{
-		"searchName": searchName,
-		"lists":      objs,
+		"search_name": searchName,
+		"lists":       objs,
+		"paginate":    paginate,
+		"toUrl":       toUrl,
+		"count":       countNum,
 	})
 }
 
@@ -1482,7 +1498,7 @@ func (ts *cms) permissionsofrolesave(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 
 func (ts *cms) logrecordpage(c *gin.Context) {
-	param, _ := c.GetQuery("searchName")
+	param := kbase.GetParam(c, "searchName")
 	count := kdaocms.CmsAdminOptionLogObj.CountByUserName(nil, param)
 	params := map[string]interface{}{
 		"searchName": param,
@@ -1536,15 +1552,42 @@ func (ts *cms) logrecorddel(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 
 func (ts *cms) tables(c *gin.Context) {
-	lists := kdao.ScanData(nil, "", 0, "show table status")
+	dbName := kbase.GetParam(c, "dbName")
+	var db string
+	var tmpDbId int64
+	if dbName != "" {
+		tmpArr := strings.Split(dbName, "_")
+		tmpArrLen := len(tmpArr)
+		if tmpArrLen >= 1 {
+			db = tmpArr[0]
+		}
+		if tmpArrLen >= 2 {
+			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+		}
+	}
+
+	dbGorMArr := make([]string, 0)
+	for k, v := range kinit.GorMMap {
+		if val, ok := v[kinit.MASTER_DB]; ok {
+			for kk := range val {
+				dbGorMArr = append(dbGorMArr, fmt.Sprintf("%s_%d", k, kk))
+			}
+		}
+	}
+
+	lists, _ := kdao.ScanData(nil, db, tmpDbId, "show table status")
 	kbase.RenderTokenHtml(c, "cms/tables_list.html", gin.H{
-		"lists": lists,
-		"count": len(lists),
+		"lists":  lists,
+		"count":  len(lists),
+		"dbArr":  dbGorMArr,
+		"dbName": dbName,
+		"toUrl":  c.Request.URL.Path,
 	})
 }
 
 type optimizeBind struct {
 	TableName string `form:"table"  validate:"required" label:"数据表名"`
+	Engine    string `form:"engine"  validate:"required" label:"引擎"`
 }
 
 func (ts *cms) optimize(c *gin.Context) {
@@ -1559,28 +1602,50 @@ func (ts *cms) optimize(c *gin.Context) {
 		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
-
-	_ = kdao.ScanData(nil, "", 0, fmt.Sprintf("optimize table %s", param.TableName))
+	switch strings.ToUpper(param.Engine) {
+	case "INNODB":
+		_, _ = kdao.ScanData(nil, "", 0, fmt.Sprintf("alter table %s engine = 'InnoDB'", param.TableName))
+	case "MYISAM":
+		_, _ = kdao.ScanData(nil, "", 0, fmt.Sprintf("optimize table %s", param.TableName))
+	default:
+		kbase.SendErrorJsonStr(c, kcode.WRONG_TABLE_ENGINE_OPTIMIZE, callbackName)
+		return
+	}
 	kbase.SendErrorJsonStr(c, kcode.SUCCESS_STATUS, "")
 }
 
 func (ts *cms) generatepage(c *gin.Context) {
-	param, _ := c.GetQuery("searchName")
-	if param == "" {
-		param, _ = kinit.Conf.GetString("mysql.db")
+	tables := make([]map[string]interface{}, 0)
+	param := kbase.GetParam(c, "searchName")
+	dbName := kbase.GetParam(c, "dbName")
+	var dbStr string
+	var tmpDbId int64
+	if dbName != "" {
+		tmpArr := strings.Split(dbName, "_")
+		tmpArrLen := len(tmpArr)
+		if tmpArrLen >= 1 {
+			dbStr = tmpArr[0]
+		}
+		if tmpArrLen >= 2 {
+			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+		}
 	}
-	sql := fmt.Sprintf("select table_name as name from information_schema.tables where table_schema='%s'", param)
-	tables := kdao.ScanData(nil, "", 0, sql)
-	db := kdao.ScanData(nil, "", 0, "select schema_name as name from information_schema.schemata")
+	if param != "" {
+		sql := fmt.Sprintf("select table_name as name from information_schema.tables where table_schema='%s'", param)
+		tables, _ = kdao.ScanData(nil, dbStr, tmpDbId, sql)
+	}
+	db, _ := kdao.ScanData(nil, dbStr, tmpDbId, "select schema_name as name from information_schema.schemata")
 	kbase.RenderTokenHtml(c, "cms/generate_sql.html", gin.H{
 		"lists":      tables,
 		"db":         db,
 		"searchName": param,
+		"dbName":     dbName,
 	})
 }
 
 type generateBind struct {
-	DBName    string `form:"db"  validate:"required" label:"数据库名"`
+	DbName    string `form:"dbName"  validate:"-" label:"数据库节点"`
+	Db        string `form:"db"  validate:"required" label:"数据库名"`
 	TableName string `form:"table"  validate:"required" label:"数据表名"`
 	IsSplit   int64  `form:"split"  validate:"required,min=1,max=2" label:"分库选项"`
 	IsDivide  int64  `form:"divide"  validate:"required,min=1,max=2" label:"分库取余选项"`
@@ -1611,7 +1676,21 @@ func (ts *cms) generate(c *gin.Context) {
 	if param.IsRead == 1 {
 		readBool = true
 	}
-	str := kutils.GenerateSql.Run(param.DBName, param.TableName, splitBool, divideBool, readBool)
+
+	var dbStr string
+	var tmpDbId int64
+	if param.DbName != "" {
+		tmpArr := strings.Split(param.DbName, "_")
+		tmpArrLen := len(tmpArr)
+		if tmpArrLen >= 1 {
+			dbStr = tmpArr[0]
+		}
+		if tmpArrLen >= 2 {
+			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+		}
+	}
+
+	str := kutils.GenerateSql.Run(dbStr, tmpDbId, param.Db, param.TableName, splitBool, divideBool, readBool)
 	kbase.SendErrorOriginJsonStr(c, kcode.SUCCESS_STATUS, str, "")
 }
 

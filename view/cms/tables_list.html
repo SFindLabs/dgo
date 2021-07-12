@@ -6,49 +6,62 @@
         <div class="ibox-title">
             权限管理 / <a onclick="window.location.reload()">数据表列表</a>
         </div>
-        <div class="row">
-            <div class="col-sm-12">
-                <div class="ibox float-e-margins">
-                    <div class="ibox-content">
-                        <a href="/generatepage">
-                            <button type="button" class="btn btn-sm btn-primary">
-                                model生成器
-                            </button>
-                        </a>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>表名</th>
-                                        <th>引擎</th>
-                                        <th>字符集</th>
-                                        <th>备注</th>
-                                        <th>创建时间</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                {{ if gt .count 0 }}
-                                    {{range .lists}}
-                                    <tr>
-                                        <td>{{.Name}}</td>
-                                        <td>{{.Engine}}</td>
-                                        <td>{{.Collation}}</td>
-                                        <td>{{.Comment}}</td>
-                                        <td>{{.Create_time}}</td>
-                                        <td>
-                                            <button class="btn btn-info btn-xs" type="button" data="{{.Name}}" onclick="optimize($(this).attr('data'));">优化
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {{end}}
-                                {{ else }}
-                                    <tr>
-                                        <td colspan="7" class="text-center">没有数据</td>
-                                    </tr>
-                                {{ end }}
-                                </tbody>
-                            </table>
+        <div role="form" class="form-inline">
+            <div class="ibox-title">
+                <div class="form-group">
+                    <label>数据库：</label>
+                    <select class="form-control" name="db_name" aria-label="">
+                        {{ range $v := .dbArr }}
+                            <option value="{{ $v }}" {{ if eq $.dbName $v }} selected {{ end }} title="配置文件的节点名称">{{ $v }}</option>
+                        {{end}}
+                    </select>
+                </div>
+                <button class="btn btn-white" onclick="search_db()"><i class="fa fa-search"></i> 搜索</button>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-content">
+                            <a href="/generatepage?dbName={{.dbName}}">
+                                <button type="button" class="btn btn-sm btn-primary">
+                                    model生成器
+                                </button>
+                            </a>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>表名</th>
+                                            <th>引擎</th>
+                                            <th>字符集</th>
+                                            <th>备注</th>
+                                            <th>创建时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {{ if gt .count 0 }}
+                                        {{range .lists}}
+                                        <tr>
+                                            <td>{{.Name}}</td>
+                                            <td>{{.Engine}}</td>
+                                            <td>{{.Collation}}</td>
+                                            <td>{{.Comment}}</td>
+                                            <td>{{.Create_time}}</td>
+                                            <td>
+                                                <button class="btn btn-info btn-xs" type="button" onclick="optimize({{.Name}}, {{.Engine}});">优化
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {{end}}
+                                    {{ else }}
+                                        <tr>
+                                            <td colspan="7" class="text-center">没有数据</td>
+                                        </tr>
+                                    {{ end }}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -59,9 +72,14 @@
 
 {{ template "footer" . }}
 <script>
+    function search_db() {
+        var db_name = $("select[name='db_name']").val();
+        window.location.href = "{{ .toUrl }}?dbName=" + db_name;
+    }
+
     // 优化
-    function optimize(table) {
-        $.post("/tables/optimize", {table: table}, function (res) {
+    function optimize(table, engine) {
+        $.post("/tables/optimize", {table: table, engine:engine}, function (res) {
             var jsonData = $.parseJSON(res);
             if(jsonData.status !== 200 && jsonData.status !== 20023){
                 layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});

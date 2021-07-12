@@ -62,6 +62,12 @@
 
 {{ template "footer" . }}
 <script>
+    $(function () {
+        if({{.count}}){
+            $(".table-responsive").append({{ .paginate }})
+        }
+    });
+
     function del_role(id){
         layer.confirm("确定删除?", {
             btn: ['确定','取消'],

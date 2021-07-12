@@ -7,6 +7,7 @@ import (
 	kcode "dgo/work/code"
 	kcms "dgo/work/control/cms"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/urfave/cli"
 	"os"
 	"runtime"
@@ -54,6 +55,12 @@ func admin(c *cli.Context) error {
 
 		kinit.InitConf("")
 		kcode.InitConfParam()
+
+		if kcode.IS_TEST_SERVER == 1 {
+			gin.SetMode(gin.DebugMode)
+		} else {
+			gin.SetMode(gin.ReleaseMode)
+		}
 
 		if runtime.GOOS != "windows" {
 			kinit.InitLog("admin")

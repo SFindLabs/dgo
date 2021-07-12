@@ -54,6 +54,7 @@ const (
 	USER_IS_LOGOUT                  = 20032
 	WRONG_NAME_ILLEGAL_CHAR_KEY     = 20033
 	WRONG_KEY_EXIST                 = 20034
+	WRONG_TABLE_ENGINE_OPTIMIZE     = 20035
 )
 
 func init() {
@@ -91,6 +92,7 @@ func init() {
 	codeToChnMsg[USER_IS_LOGOUT] = "此账号已登出"
 	codeToChnMsg[WRONG_NAME_ILLEGAL_CHAR_KEY] = "键的值只能包含英文_"
 	codeToChnMsg[WRONG_KEY_EXIST] = "键已经存在"
+	codeToChnMsg[WRONG_TABLE_ENGINE_OPTIMIZE] = "暂不支持此引擎表优化"
 }
 func GetCodeMsg(code int) string {
 	if msg, ok := codeToMsg[code]; ok {
