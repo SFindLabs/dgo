@@ -41,19 +41,20 @@ func (CmsAdminOptionLog) Insert(tx *jgorm.DB, userName string, userId int64, pat
 	return obj, nil
 }
 
-func (CmsAdminOptionLog) CountByUserName(tx *jgorm.DB, userName string) (count int) {
+func (CmsAdminOptionLog) CountByUserName(tx *jgorm.DB, userName string) (count int, userIds []int64) {
 	if tx == nil {
 		tx, _ = kinit.GetMysqlConnect("")
 	}
 	tx = tx.Model(CmsAdminOptionLog{})
 	if userName != "" {
-		tx = tx.Where("user_name like ?", "%"+userName+"%")
+		tx.Model(CmsAdminUsers{}).Where("name like ?", "%"+userName+"%").Pluck("id", &userIds)
+		tx = tx.Where("user_id in (?)", userIds)
 	}
 	tx.Count(&count)
 	return
 }
 
-func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userName string, page int64, pageSize int64) []CmsAdminOptionLog {
+func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userName string, userIds []int64, page int64, pageSize int64) []CmsAdminOptionLog {
 	var objs []CmsAdminOptionLog
 	if count == 0 {
 		return objs
@@ -62,11 +63,20 @@ func (CmsAdminOptionLog) GetByUserName(tx *jgorm.DB, count int, userName string,
 		tx, _ = kinit.GetMysqlConnect("")
 	}
 
-	tx = tx.Model(CmsAdminOptionLog{})
-	if userName != "" {
-		tx = tx.Where("user_name like ?", "%"+userName+"%")
+	hasId := userName != ""
+	joinSql := "select id from cms_admin_option_log "
+	if hasId {
+		joinSql += "where user_id in (?) "
 	}
-	tx.Limit(pageSize).Offset((page - 1) * pageSize).Order("id desc").Find(&objs)
+	joinSql += "order by id desc limit ?, ?"
+	sql := "select * from cms_admin_option_log as cal inner join (" + joinSql + ") as tmp on cal.id = tmp.id;"
+
+	if hasId {
+		tx = tx.Raw(sql, userIds, (page-1)*pageSize, pageSize)
+	} else {
+		tx = tx.Raw(sql, (page-1)*pageSize, pageSize)
+	}
+	tx.Scan(&objs)
 	return objs
 }
 
