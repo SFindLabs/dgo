@@ -254,6 +254,7 @@ func InitRedis() {
 			} else {
 				timeout = cc["idle_timeout"]
 			}
+
 			tmpRedisPool, err := kredis.NewRedisPool(host, port, auth, db, idle, active, timeout)
 			if err != nil {
 				log.Panic(err)

@@ -40,6 +40,54 @@ func (m *Menu) MenuList(objs []kdaocms.CmsAdminPermissions) []*treeMenuList {
 	return m.getMenu(objs, 0, 0)
 }
 
+//菜单管理搜索合并
+func (m *Menu) MenuSearchMerge(objs []kdaocms.CmsAdminPermissions, idsMap map[int64]int64) []*Menu {
+	tmp := make([]*Menu, 0)
+	list := m.getMenu(objs, 0, 0)
+	for _, v := range list {
+		_, ok := idsMap[v.ID]
+		//判断一级目录
+		if v.Pid == 0 && ok {
+			tmp = append(tmp, &Menu{
+				ID:        v.ID,
+				Name:      v.Name,
+				Pid:       v.Pid,
+				Level:     v.Level,
+				Path:      v.Path,
+				IsShow:    v.IsShow,
+				IsRecord:  v.IsRecord,
+				IsModify:  v.IsModify,
+				CreatedAt: v.CreatedAt,
+			})
+			if len(v.Child) > 0 {
+				tmp = append(tmp, m.concat(v.ID, v.Child)...)
+			}
+		} else {
+			//判断二级目录
+			for _, vv := range v.Child {
+				if _, ok := idsMap[vv.ID]; ok {
+					tmp = append(tmp, &Menu{
+						ID:        vv.ID,
+						Name:      vv.Name,
+						Pid:       vv.Pid,
+						Level:     vv.Level,
+						Path:      vv.Path,
+						IsShow:    vv.IsShow,
+						IsRecord:  vv.IsRecord,
+						IsModify:  vv.IsModify,
+						CreatedAt: vv.CreatedAt,
+					})
+					if len(vv.Child) > 0 {
+						tmp = append(tmp, m.concat(vv.ID, vv.Child)...)
+					}
+				}
+			}
+		}
+	}
+
+	return tmp
+}
+
 /**
 *   合并菜单树形为切片方便遍历取出
 * 	param objs []CmsAdminPermissions 所有菜单
@@ -87,7 +135,7 @@ func (m *Menu) MenuMerge(objs []kdaocms.CmsAdminPermissions) []*Menu {
 				IsModify:  v.IsModify,
 				CreatedAt: v.CreatedAt,
 			})
-			if len(v.Child) != 0 {
+			if len(v.Child) > 0 {
 				tmp = append(tmp, m.concat(v.ID, v.Child)...)
 			}
 		}
@@ -116,7 +164,7 @@ func (m *Menu) concat(id int64, list []*treeMenuList) []*Menu {
 				IsModify:  v.IsModify,
 				CreatedAt: v.CreatedAt,
 			})
-			if len(v.Child) != 0 {
+			if len(v.Child) > 0 {
 				tmp = append(tmp, m.concat(v.ID, v.Child)...)
 			}
 		}
@@ -152,7 +200,7 @@ func (m *Menu) DelMergeId(id int64, objs []kdaocms.CmsAdminPermissions) []*delMe
 			tmp = append(tmp, &delMenuId{
 				ID: v.ID,
 			})
-			if len(v.Child) != 0 {
+			if len(v.Child) > 0 {
 				tmp = append(tmp, m.concatId(v.ID, v.Child)...)
 			}
 		}
@@ -173,7 +221,7 @@ func (m *Menu) concatId(id int64, list []*treeMenuList) []*delMenuId {
 			tmp = append(tmp, &delMenuId{
 				ID: v.ID,
 			})
-			if len(v.Child) != 0 {
+			if len(v.Child) > 0 {
 				tmp = append(tmp, m.concatId(v.ID, v.Child)...)
 			}
 		}

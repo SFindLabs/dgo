@@ -91,6 +91,19 @@ func (CmsAdminPermissions) GetByPidName(tx *jgorm.DB, name string, pid int64) Cm
 	return objs
 }
 
+func (CmsAdminPermissions) GetByLikePidName(tx *jgorm.DB, name string, pid int64) (ids []int64) {
+	if tx == nil {
+		tx, _ = kinit.GetMysqlConnect("")
+	}
+	tx = tx.Model(CmsAdminPermissions{})
+	if name != "" {
+		tx.Where("name like (?)", "%"+name+"%").Pluck("id", &ids)
+	} else {
+		tx.Where("pid = ?", pid).Pluck("id", &ids)
+	}
+	return
+}
+
 func (CmsAdminPermissions) GetByPath(tx *jgorm.DB, path string) CmsAdminPermissions {
 	if tx == nil {
 		tx, _ = kinit.GetMysqlConnect("")

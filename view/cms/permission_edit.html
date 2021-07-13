@@ -10,7 +10,7 @@
 <body class="gray-bg">
 <div class="wrapper wrapper-content">
     <div class="ibox-title">
-        权限管理 / <a href="/permission">菜单管理</a> / <a onclick="window.location.reload()">编辑菜单</a>
+        权限管理 / <a href="/permission?search_name={{ .search_name }}">菜单管理</a> / <a onclick="window.location.reload()">编辑菜单</a>
     </div>
     <div class="row">
         <div class="col-sm-12">
@@ -65,7 +65,7 @@
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-3">
                                 <button class="btn btn-sm btn-primary" onclick="edit_permission()">修 改</button>
-                                <a href="/permission" class="btn btn-sm btn-white">取消</a>
+                                <a href="/permission?search_name={{ .search_name }}" class="btn btn-sm btn-white">取消</a>
                             </div>
                         </div>
                     </div>
@@ -99,7 +99,7 @@
                     time: 1000,
                     title: "提示",
                     end:function () {
-                        window.location.href = "/permission";
+                        window.location.href = "/permission?search_name={{ .search_name }}";
                     }
                 });
             }

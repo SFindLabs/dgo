@@ -1091,14 +1091,22 @@ func (ts *cms) userdel(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 
 func (ts *cms) permissionpage(c *gin.Context) {
+	searchName := strings.Trim(kbase.GetParam(c, "search_name"), " ")
 	objs := kdaocms.CmsAdminPermissionsObj.GetAll(nil)
+	ids := kdaocms.CmsAdminPermissionsObj.GetByLikePidName(nil, searchName, 0)
+	idsMap := make(map[int64]int64)
+	for _, id := range ids {
+		idsMap[id] = id
+	}
 	kbase.RenderTokenHtml(c, "cms/permission_list.html", gin.H{
-		"lists": kutils.TreeMenu.MenuMerge(objs),
+		"lists":       kutils.TreeMenu.MenuSearchMerge(objs, idsMap),
+		"search_name": searchName,
 	})
 }
 
 func (ts *cms) permissionaddpage(c *gin.Context) {
 	idStr := kbase.GetParam(c, "id")
+	searchName := kbase.GetParam(c, "search_name")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		c.Redirect(http.StatusFound, "/permission")
@@ -1108,6 +1116,7 @@ func (ts *cms) permissionaddpage(c *gin.Context) {
 	kbase.RenderTokenHtml(c, "cms/permission_add.html", gin.H{
 		"permissionId": id,
 		"lists":        kutils.TreeMenu.MenuMerge(objs),
+		"search_name":  searchName,
 	})
 }
 
@@ -1193,6 +1202,7 @@ func (ts *cms) permissionadd(c *gin.Context) {
 
 func (ts *cms) permissioneditpage(c *gin.Context) {
 	idStr := kbase.GetParam(c, "id")
+	searchName := kbase.GetParam(c, "search_name")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		kinit.LogError.Println(err)
@@ -1202,8 +1212,9 @@ func (ts *cms) permissioneditpage(c *gin.Context) {
 	objs := kdaocms.CmsAdminPermissionsObj.GetAll(nil)
 	obj := kdaocms.CmsAdminPermissionsObj.GetById(nil, id)
 	kbase.RenderTokenHtml(c, "cms/permission_edit.html", gin.H{
-		"lists": kutils.TreeMenu.MenuMerge(objs),
-		"obj":   obj,
+		"lists":       kutils.TreeMenu.MenuMerge(objs),
+		"obj":         obj,
+		"search_name": searchName,
 	})
 }
 

@@ -4,7 +4,6 @@ import (
 	kruntime "dgo/framework/tools/runtime"
 	kinit "dgo/work/base/initialize"
 	"bytes"
-	ksql "database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -16,70 +15,41 @@ type Generate struct {
 }
 
 func (ts *Generate) Run(dbStr string, tmpDbId int64, tableSchema, tableName string, isSplit, isDivide, isRead bool) string {
-	sqlStr := "select column_name,data_type,column_key from information_schema.columns where table_schema=? and table_name=?;"
-	model, err := kinit.GetMysqlConnect(dbStr, tmpDbId)
-	if err != nil {
-		return err.Error()
-	}
-	rows, err := model.Raw(sqlStr, tableSchema, tableName).Rows()
-	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
-		return err.Error()
-	}
-	createStr := createTable(tableName, rows)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
+	tableMap, err := getTableStructure(dbStr, tmpDbId, tableSchema, tableName)
 	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
+		kinit.LogError.Println("get table structure fail :", err)
 		return err.Error()
 	}
-	insertStr := insertTable(tableName, rows, isSplit, isDivide)
 
-	sqlStr = "select column_name, index_name, seq_in_index from information_schema.statistics where table_schema=? and table_name=?;"
+	createStr := createTable(tableName, tableMap)
+
+	insertStr := insertTable(tableName, tableMap, isSplit, isDivide)
 
 	getAllStr := getAllTable(tableName, isSplit, isDivide, isRead)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
+	tableIndexArr, err := getTableIndex(dbStr, tmpDbId, tableSchema, tableName)
 	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
+		kinit.LogError.Println("get table structure fail :", err)
 		return err.Error()
 	}
-	getStr := getTable(dbStr, tmpDbId, tableSchema, tableName, rows, isSplit, isDivide, isRead)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
-	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
-		return err.Error()
-	}
-	updateStr := updateTable(dbStr, tmpDbId, tableSchema, tableName, rows, isSplit, isDivide)
+	getStr := getTable(tableName, tableIndexArr, isSplit, isDivide, isRead)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
-	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
-		return err.Error()
-	}
-	updateMustStr := updateMustTable(dbStr, tmpDbId, tableSchema, tableName, rows, isSplit, isDivide)
+	updateStr := updateTable(tableName, tableIndexArr, isSplit, isDivide)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
-	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
-		return err.Error()
-	}
-	deleteStr := deleteTable(dbStr, tmpDbId, tableSchema, tableName, rows, isSplit, isDivide)
+	updateMustStr := updateMustTable(tableName, tableIndexArr, isSplit, isDivide)
 
-	rows, err = model.Raw(sqlStr, tableSchema, tableName).Rows()
-	if err != nil {
-		kinit.LogError.Println("get  fail :", err)
-		return err.Error()
-	}
-	deleteMustStr := deleteMustTable(dbStr, tmpDbId, tableSchema, tableName, rows, isSplit, isDivide)
+	deleteStr := deleteTable(tableName, tableIndexArr, isSplit, isDivide)
+
+	deleteMustStr := deleteMustTable(tableName, tableIndexArr, isSplit, isDivide)
 
 	return fmt.Sprintf("\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s", createStr, insertStr, getAllStr, getStr, updateStr, updateMustStr, deleteStr, deleteMustStr)
 }
 
 //---------------------------------------------------------------------------
 
-func createTable(tableName string, rows *ksql.Rows) string {
+func createTable(tableName string, rows map[string]tableType) string {
 	var sql string
 	upperTableName := convertUpper(tableName, true)
 	path, err := kruntime.GetCurrentPath()
@@ -91,19 +61,15 @@ func createTable(tableName string, rows *ksql.Rows) string {
 	dirName := slicePath[len(slicePath)-1]
 	sql += "package model\n\nimport (\n\t\"errors\"\n\tkinit \"" + dirName + "/work/base/initialize\"\n\tjgorm \"github.com/jinzhu/gorm\"\n\t//\"time\"\n)"
 	sql += "\n\nvar " + upperTableName + "Obj " + upperTableName + "\n\nvar " + convertUpper(tableName, false) + "DB = \"\"\n\ntype " + upperTableName + " struct {\n"
-	for rows.Next() {
-		columnName, dataType, columnKey := "", "", ""
-		err := rows.Scan(&columnName, &dataType, &columnKey)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if "ID" == strings.ToUpper(columnName) {
+
+	for rowKey, rowVal := range rows {
+		if "ID" == strings.ToUpper(rowKey) {
 			sql += "\tID     int64  `gorm:\"primary_key\" json:\"-\"`\n"
 		} else {
-			sql += "\t" + convertUpper(columnName, true) + " " + getType(dataType, columnName) + " `gorm:\"column:" + columnName + "\" json:\"" + columnName + "\"`\n"
+			sql += "\t" + convertUpper(rowKey, true) + " " + getType(rowVal.dataType, rowKey) + " `gorm:\"column:" + rowKey + "\" json:\"" + rowKey + "\"`\n"
 		}
 	}
+
 	sql += "}\n\n"
 	sql += "func (" + upperTableName + ") TableName() string {\n"
 	sql += "\treturn \"" + tableName + "\"\n}\n"
@@ -113,7 +79,7 @@ func createTable(tableName string, rows *ksql.Rows) string {
 
 //---------------------------------------------------------------------------
 
-func insertTable(tableName string, rows *ksql.Rows, isSplit, isDivide bool) string {
+func insertTable(tableName string, rows map[string]tableType, isSplit, isDivide bool) string {
 	var bf bytes.Buffer
 	var bt bytes.Buffer
 	dbName := convertUpper(tableName, false)
@@ -139,15 +105,14 @@ func insertTable(tableName string, rows *ksql.Rows, isSplit, isDivide bool) stri
 	}`)
 	}
 	_, _ = fmt.Fprintf(&bt, "\n\t//timeStr := time.Now().Format(\"2006-01-02 15:04:05\")\n\tobj := %s{\n", upperTableName)
-	for rows.Next() {
-		columnName, dataType, columnKey := "", "", ""
-		_ = rows.Scan(&columnName, &dataType, &columnKey)
 
-		if columnKey != "PRI" {
-			_, _ = fmt.Fprintf(&bf, ", %s %s", convertUpper(columnName, false), getType(dataType, columnName))
-			_, _ = fmt.Fprintf(&bt, "\t\t%s:%s,\n", convertUpper(columnName, true), convertUpper(columnName, false))
+	for rowKey, rowVal := range rows {
+		if rowVal.columnKey != "PRI" {
+			_, _ = fmt.Fprintf(&bf, ", %s %s", convertUpper(rowKey, false), getType(rowVal.dataType, rowKey))
+			_, _ = fmt.Fprintf(&bt, "\t\t%s:%s,\n", convertUpper(rowKey, true), convertUpper(rowKey, false))
 		}
 	}
+
 	_, _ = fmt.Fprintf(&bf, ")(%s, error)", upperTableName)
 	_, _ = fmt.Fprintf(&bt, `	}
 	if err := tx.Create(&obj).Error; err != nil {
@@ -212,7 +177,7 @@ func (%s) GetAll(%s) (objs []%s) {
 
 //---------------------------------------------------------------------------
 
-func getTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *ksql.Rows, isSplit, isDivide, isRead bool) string {
+func getTable(tableName string, rows []tableIndexParam, isSplit, isDivide, isRead bool) string {
 	var sql string
 	dbName := convertUpper(tableName, false)
 	db := "tx *jgorm.DB"
@@ -251,81 +216,15 @@ func getTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *
 	}
 
 	upperTableName := convertUpper(tableName, true)
-	tmpUnion := make(map[string]map[int]string)
 	sql += ""
 
-	for rows.Next() {
-		columnName, indexName, indexSeq := "", "", 0
-		err := rows.Scan(&columnName, &indexName, &indexSeq)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if _, ok := tmpUnion[indexName]; ok {
-			tmpUnion[indexName][indexSeq] = columnName
-		} else {
-			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
-		}
-	}
-
-	model, _ := kinit.GetMysqlConnect(dbStr, tmpDbId)
-
-	for _, v := range tmpUnion {
-		byStr, paramStr, whereStr, whereParam := "", "", "", ""
-		var tmpKeys []int
-		for tmpKey := range v {
-			tmpKeys = append(tmpKeys, tmpKey)
-		}
-		sort.Ints(tmpKeys)
-		for _, key := range tmpKeys {
-			vv := v[key]
-			dataType := ""
-			sqlStr := "select data_type from information_schema.columns where table_schema=? and table_name=? and column_name = ?;"
-			row, err := model.Raw(sqlStr, tableSchema, tableName, vv).Rows()
-			if err != nil {
-				kinit.LogError.Println("get  fail :", err)
-				return err.Error()
-			}
-			if !row.Next() {
-				kinit.LogError.Println("no next body row")
-				return ""
-			}
-			err = row.Scan(&dataType)
-			if err != nil {
-				kinit.LogError.Println("scan fail :", err)
-				return ""
-			}
-
-			if byStr == "" {
-				byStr += fmt.Sprintf("%s", convertUpper(vv, true))
-			} else {
-				byStr += fmt.Sprintf("And%s", convertUpper(vv, true))
-			}
-
-			if paramStr == "" {
-				paramStr += fmt.Sprintf("%s %s", convertUpper(vv, false), getType(dataType, vv))
-			} else {
-				paramStr += fmt.Sprintf(", %s %s", convertUpper(vv, false), getType(dataType, vv))
-			}
-
-			if whereStr == "" {
-				whereStr += fmt.Sprintf("%s = ?", vv)
-			} else {
-				whereStr += fmt.Sprintf(" and %s = ?", vv)
-			}
-
-			if whereParam == "" {
-				whereParam += fmt.Sprintf("%s", convertUpper(vv, false))
-			} else {
-				whereParam += fmt.Sprintf(", %s", convertUpper(vv, false))
-			}
-		}
+	for _, row := range rows {
 		sql += fmt.Sprintf(`
-func (%s) GetBy%s(%s, %s) (objs %s) {
+func (%s) GetBy%s(%s, %s) (obj %s) {
 	%s
-	tx.Where("%s", %s).First(&objs)
+	tx.Where("%s", %s).First(&obj)
 	return
-}%s`, upperTableName, byStr, db, paramStr, upperTableName, dbConn, whereStr, whereParam, "\n")
+}%s`, upperTableName, row.byStr, db, row.paramStr, upperTableName, dbConn, row.whereStr, row.whereParam, "\n")
 	}
 
 	return strings.TrimRight(sql, "\n")
@@ -333,7 +232,7 @@ func (%s) GetBy%s(%s, %s) (objs %s) {
 
 //---------------------------------------------------------------------------
 
-func updateTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *ksql.Rows, isSplit, isDivide bool) string {
+func updateTable(tableName string, rows []tableIndexParam, isSplit, isDivide bool) string {
 	var sql string
 	dbName := convertUpper(tableName, false)
 	upperTableName := convertUpper(tableName, true)
@@ -354,75 +253,7 @@ func updateTable(dbStr string, tmpDbId int64, tableSchema, tableName string, row
 	}
 
 	sql += ""
-	tmpUnion := make(map[string]map[int]string)
-
-	for rows.Next() {
-		columnName, indexName, indexSeq := "", "", 0
-		err := rows.Scan(&columnName, &indexName, &indexSeq)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if _, ok := tmpUnion[indexName]; ok {
-			tmpUnion[indexName][indexSeq] = columnName
-		} else {
-			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
-		}
-	}
-
-	model, _ := kinit.GetMysqlConnect(dbStr, tmpDbId)
-
-	for _, v := range tmpUnion {
-		byStr, paramStr, whereStr, whereParam := "", "", "", ""
-		var tmpKeys []int
-		for tmpKey := range v {
-			tmpKeys = append(tmpKeys, tmpKey)
-		}
-		sort.Ints(tmpKeys)
-		for _, key := range tmpKeys {
-			vv := v[key]
-			dataType := ""
-			sqlStr := "select data_type from information_schema.columns where table_schema=? and table_name=? and column_name = ?;"
-			row, err := model.Raw(sqlStr, tableSchema, tableName, vv).Rows()
-			if err != nil {
-				kinit.LogError.Println("get  fail :", err)
-				return err.Error()
-			}
-			if !row.Next() {
-				kinit.LogError.Println("no next body row")
-				return ""
-			}
-			err = row.Scan(&dataType)
-			if err != nil {
-				kinit.LogError.Println("scan fail :", err)
-				return ""
-			}
-
-			if byStr == "" {
-				byStr += fmt.Sprintf("%s", convertUpper(vv, true))
-			} else {
-				byStr += fmt.Sprintf("And%s", convertUpper(vv, true))
-			}
-
-			if paramStr == "" {
-				paramStr += fmt.Sprintf("%s %s", convertUpper(vv, false), getType(dataType, vv))
-			} else {
-				paramStr += fmt.Sprintf(", %s %s", convertUpper(vv, false), getType(dataType, vv))
-			}
-
-			if whereStr == "" {
-				whereStr += fmt.Sprintf("%s = ?", vv)
-			} else {
-				whereStr += fmt.Sprintf(" and %s = ?", vv)
-			}
-
-			if whereParam == "" {
-				whereParam += fmt.Sprintf("%s", convertUpper(vv, false))
-			} else {
-				whereParam += fmt.Sprintf(", %s", convertUpper(vv, false))
-			}
-		}
-
+	for _, row := range rows {
 		sql += fmt.Sprintf(`
 func (%s) UpdateBy%s(%s, %s, updateMap map[string]interface{}) error {
 	%s
@@ -431,7 +262,7 @@ func (%s) UpdateBy%s(%s, %s, updateMap map[string]interface{}) error {
 		return err
 	}
 	return nil
-}%s`, upperTableName, byStr, db, paramStr, dbConn, upperTableName, whereStr, whereParam, "\n")
+}%s`, upperTableName, row.byStr, db, row.paramStr, dbConn, upperTableName, row.whereStr, row.whereParam, "\n")
 	}
 
 	return strings.TrimRight(sql, "\n")
@@ -439,7 +270,7 @@ func (%s) UpdateBy%s(%s, %s, updateMap map[string]interface{}) error {
 
 //---------------------------------------------------------------------------
 
-func updateMustTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *ksql.Rows, isSplit, isDivide bool) string {
+func updateMustTable(tableName string, rows []tableIndexParam, isSplit, isDivide bool) string {
 	var sql string
 	dbName := convertUpper(tableName, false)
 	upperTableName := convertUpper(tableName, true)
@@ -460,76 +291,7 @@ func updateMustTable(dbStr string, tmpDbId int64, tableSchema, tableName string,
 	}
 
 	sql += ""
-	tmpUnion := make(map[string]map[int]string)
-
-	for rows.Next() {
-		columnName, indexName, indexSeq := "", "", 0
-		err := rows.Scan(&columnName, &indexName, &indexSeq)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if _, ok := tmpUnion[indexName]; ok {
-			tmpUnion[indexName][indexSeq] = columnName
-		} else {
-			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
-		}
-	}
-
-	model, _ := kinit.GetMysqlConnect(dbStr, tmpDbId)
-
-	for _, v := range tmpUnion {
-		byStr, paramStr, whereStr, whereParam := "", "", "", ""
-		var tmpKeys []int
-		for tmpKey := range v {
-			tmpKeys = append(tmpKeys, tmpKey)
-		}
-		sort.Ints(tmpKeys)
-		for _, key := range tmpKeys {
-			vv := v[key]
-			dataType := ""
-			sqlStr := "select data_type from information_schema.columns where table_schema=? and table_name=? and column_name = ?;"
-
-			row, err := model.Raw(sqlStr, tableSchema, tableName, vv).Rows()
-			if err != nil {
-				kinit.LogError.Println("get  fail :", err)
-				return err.Error()
-			}
-			if !row.Next() {
-				kinit.LogError.Println("no next body row")
-				return ""
-			}
-			err = row.Scan(&dataType)
-			if err != nil {
-				kinit.LogError.Println("scan fail :", err)
-				return ""
-			}
-
-			if byStr == "" {
-				byStr += fmt.Sprintf("%s", convertUpper(vv, true))
-			} else {
-				byStr += fmt.Sprintf("And%s", convertUpper(vv, true))
-			}
-
-			if paramStr == "" {
-				paramStr += fmt.Sprintf("%s %s", convertUpper(vv, false), getType(dataType, vv))
-			} else {
-				paramStr += fmt.Sprintf(", %s %s", convertUpper(vv, false), getType(dataType, vv))
-			}
-
-			if whereStr == "" {
-				whereStr += fmt.Sprintf("%s = ?", vv)
-			} else {
-				whereStr += fmt.Sprintf(" and %s = ?", vv)
-			}
-
-			if whereParam == "" {
-				whereParam += fmt.Sprintf("%s", convertUpper(vv, false))
-			} else {
-				whereParam += fmt.Sprintf(", %s", convertUpper(vv, false))
-			}
-		}
-
+	for _, row := range rows {
 		sql += fmt.Sprintf(`
 func (%s) UpdateMustBy%s(%s, %s, updateMap map[string]interface{}) error {
 	%s
@@ -543,7 +305,7 @@ func (%s) UpdateMustBy%s(%s, %s, updateMap map[string]interface{}) error {
 		return errMsg
 	}
 	return nil
-}%s`, upperTableName, byStr, db, paramStr, dbConn, upperTableName, whereStr, whereParam, upperTableName, byStr, "\n")
+}%s`, upperTableName, row.byStr, db, row.paramStr, dbConn, upperTableName, row.whereStr, row.whereParam, upperTableName, row.byStr, "\n")
 	}
 
 	return strings.TrimRight(sql, "\n")
@@ -551,7 +313,7 @@ func (%s) UpdateMustBy%s(%s, %s, updateMap map[string]interface{}) error {
 
 //---------------------------------------------------------------------------
 
-func deleteTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *ksql.Rows, isSplit, isDivide bool) string {
+func deleteTable(tableName string, rows []tableIndexParam, isSplit, isDivide bool) string {
 	var sql string
 	upperTableName := convertUpper(tableName, true)
 	dbName := convertUpper(tableName, false)
@@ -572,75 +334,7 @@ func deleteTable(dbStr string, tmpDbId int64, tableSchema, tableName string, row
 	}
 
 	sql += ""
-	tmpUnion := make(map[string]map[int]string)
-
-	for rows.Next() {
-		columnName, indexName, indexSeq := "", "", 0
-		err := rows.Scan(&columnName, &indexName, &indexSeq)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if _, ok := tmpUnion[indexName]; ok {
-			tmpUnion[indexName][indexSeq] = columnName
-		} else {
-			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
-		}
-	}
-
-	model, _ := kinit.GetMysqlConnect(dbStr, tmpDbId)
-
-	for _, v := range tmpUnion {
-		byStr, paramStr, whereStr, whereParam := "", "", "", ""
-		var tmpKeys []int
-		for tmpKey := range v {
-			tmpKeys = append(tmpKeys, tmpKey)
-		}
-		sort.Ints(tmpKeys)
-		for _, key := range tmpKeys {
-			vv := v[key]
-			dataType := ""
-			sqlStr := "select data_type from information_schema.columns where table_schema=? and table_name=? and column_name = ?;"
-			row, err := model.Raw(sqlStr, tableSchema, tableName, vv).Rows()
-			if err != nil {
-				kinit.LogError.Println("get  fail :", err)
-				return err.Error()
-			}
-			if !row.Next() {
-				kinit.LogError.Println("no next body row")
-				return ""
-			}
-			err = row.Scan(&dataType)
-			if err != nil {
-				kinit.LogError.Println("scan fail :", err)
-				return ""
-			}
-
-			if byStr == "" {
-				byStr += fmt.Sprintf("%s", convertUpper(vv, true))
-			} else {
-				byStr += fmt.Sprintf("And%s", convertUpper(vv, true))
-			}
-
-			if paramStr == "" {
-				paramStr += fmt.Sprintf("%s %s", convertUpper(vv, false), getType(dataType, vv))
-			} else {
-				paramStr += fmt.Sprintf(", %s %s", convertUpper(vv, false), getType(dataType, vv))
-			}
-
-			if whereStr == "" {
-				whereStr += fmt.Sprintf("%s = ?", vv)
-			} else {
-				whereStr += fmt.Sprintf(" and %s = ?", vv)
-			}
-
-			if whereParam == "" {
-				whereParam += fmt.Sprintf("%s", convertUpper(vv, false))
-			} else {
-				whereParam += fmt.Sprintf(", %s", convertUpper(vv, false))
-			}
-		}
-
+	for _, row := range rows {
 		sql += fmt.Sprintf(`
 func (%s) DeleteBy%s(%s, %s) error {
 	%s
@@ -650,7 +344,7 @@ func (%s) DeleteBy%s(%s, %s) error {
 		return err
 	}
 	return nil
-}%s`, upperTableName, byStr, db, paramStr, dbConn, upperTableName, whereStr, whereParam, "\n")
+}%s`, upperTableName, row.byStr, db, row.paramStr, dbConn, upperTableName, row.whereStr, row.whereParam, "\n")
 	}
 
 	return strings.TrimRight(sql, "\n")
@@ -658,7 +352,7 @@ func (%s) DeleteBy%s(%s, %s) error {
 
 //---------------------------------------------------------------------------
 
-func deleteMustTable(dbStr string, tmpDbId int64, tableSchema, tableName string, rows *ksql.Rows, isSplit, isDivide bool) string {
+func deleteMustTable(tableName string, rows []tableIndexParam, isSplit, isDivide bool) string {
 	var sql string
 	upperTableName := convertUpper(tableName, true)
 	dbName := convertUpper(tableName, false)
@@ -679,73 +373,7 @@ func deleteMustTable(dbStr string, tmpDbId int64, tableSchema, tableName string,
 	}
 
 	sql += ""
-	tmpUnion := make(map[string]map[int]string)
-
-	for rows.Next() {
-		columnName, indexName, indexSeq := "", "", 0
-		err := rows.Scan(&columnName, &indexName, &indexSeq)
-		if err != nil {
-			kinit.LogError.Println("scan fail :", err)
-			return ""
-		}
-		if _, ok := tmpUnion[indexName]; ok {
-			tmpUnion[indexName][indexSeq] = columnName
-		} else {
-			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
-		}
-	}
-
-	model, _ := kinit.GetMysqlConnect(dbStr, tmpDbId)
-
-	for _, v := range tmpUnion {
-		byStr, paramStr, whereStr, whereParam := "", "", "", ""
-		var tmpKeys []int
-		for tmpKey := range v {
-			tmpKeys = append(tmpKeys, tmpKey)
-		}
-		sort.Ints(tmpKeys)
-		for _, key := range tmpKeys {
-			vv := v[key]
-			dataType := ""
-			sqlStr := "select data_type from information_schema.columns where table_schema=? and table_name=? and column_name = ?;"
-
-			row, err := model.Raw(sqlStr, tableSchema, tableName, vv).Rows()
-			if err != nil {
-				kinit.LogError.Println("get  fail :", err)
-				return err.Error()
-			}
-			if !row.Next() {
-				kinit.LogError.Println("no next body row")
-				return ""
-			}
-			err = row.Scan(&dataType)
-			if err != nil {
-				kinit.LogError.Println("scan fail :", err)
-				return ""
-			}
-
-			if byStr == "" {
-				byStr += fmt.Sprintf("%s", convertUpper(vv, true))
-			} else {
-				byStr += fmt.Sprintf("And%s", convertUpper(vv, true))
-			}
-			if paramStr == "" {
-				paramStr += fmt.Sprintf("%s %s", convertUpper(vv, false), getType(dataType, vv))
-			} else {
-				paramStr += fmt.Sprintf(", %s %s", convertUpper(vv, false), getType(dataType, vv))
-			}
-			if whereStr == "" {
-				whereStr += fmt.Sprintf("%s = ?", vv)
-			} else {
-				whereStr += fmt.Sprintf(" and %s = ?", vv)
-			}
-			if whereParam == "" {
-				whereParam += fmt.Sprintf("%s", convertUpper(vv, false))
-			} else {
-				whereParam += fmt.Sprintf(", %s", convertUpper(vv, false))
-			}
-		}
-
+	for _, row := range rows {
 		sql += fmt.Sprintf(`
 func (%s) DeleteMustBy%s(%s, %s) error {
 	%s
@@ -760,10 +388,151 @@ func (%s) DeleteMustBy%s(%s, %s) error {
 		return errMsg
 	}
 	return nil
-}%s`, upperTableName, byStr, db, paramStr, dbConn, upperTableName, whereStr, whereParam, upperTableName, byStr, "\n")
+}%s`, upperTableName, row.byStr, db, row.paramStr, dbConn, upperTableName, row.whereStr, row.whereParam, upperTableName, row.byStr, "\n")
 	}
 
 	return strings.TrimRight(sql, "\n")
+}
+
+//---------------------------------------------------------------------------
+//获取表结构
+type tableType struct {
+	dataType  string
+	columnKey string
+}
+
+func getTableStructure(dbStr string, tmpDbId int64, tableSchema, tableName string) (map[string]tableType, error) {
+	tableMap := make(map[string]tableType)
+	sqlStr := "select column_name,data_type,column_key from information_schema.columns where table_schema=? and table_name=?;"
+	model, err := kinit.GetMysqlConnect(dbStr, tmpDbId)
+	if err != nil {
+		return tableMap, err
+	}
+	rows, err := model.Raw(sqlStr, tableSchema, tableName).Rows()
+	if err != nil {
+		return tableMap, err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+	for rows.Next() {
+		columnName, dataType, columnKey := "", "", ""
+		err := rows.Scan(&columnName, &dataType, &columnKey)
+		if err != nil {
+			return tableMap, err
+		}
+		tableMap[columnName] = tableType{
+			dataType:  dataType,
+			columnKey: columnKey,
+		}
+	}
+
+	return tableMap, nil
+}
+
+//---------------------------------------------------------------------------
+//获取表索引
+type tableIndexParam struct {
+	byStr      string
+	paramStr   string
+	whereStr   string
+	whereParam string
+}
+
+func getTableIndex(dbStr string, tmpDbId int64, tableSchema, tableName string) ([]tableIndexParam, error) {
+	tmpIndexSlice := make([]tableIndexParam, 0)
+	//获取列名索引以及索引顺序
+	sqlStr := "select column_name, index_name, seq_in_index from information_schema.statistics where table_schema=? and table_name=?;"
+	model, err := kinit.GetMysqlConnect(dbStr, tmpDbId)
+	if err != nil {
+		return tmpIndexSlice, err
+	}
+	rows, err := model.Raw(sqlStr, tableSchema, tableName).Rows()
+	if err != nil {
+		return tmpIndexSlice, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	tmpUnion := make(map[string]map[int]string)
+	columnArr := make([]string, 0)
+
+	for rows.Next() {
+		columnName, indexName, indexSeq := "", "", 0
+		err := rows.Scan(&columnName, &indexName, &indexSeq)
+		if err != nil {
+			return tmpIndexSlice, err
+		}
+		if _, ok := tmpUnion[indexName]; ok {
+			tmpUnion[indexName][indexSeq] = columnName
+		} else {
+			tmpUnion[indexName] = map[int]string{indexSeq: columnName}
+		}
+		columnArr = append(columnArr, columnName)
+	}
+
+	//获取列名以及数据类型
+	sqlStr = "select column_name, data_type from information_schema.columns where table_schema=? and table_name=? and column_name in (?);"
+	columnRows, err := model.Raw(sqlStr, tableSchema, tableName, columnArr).Rows()
+	if err != nil {
+		return tmpIndexSlice, err
+	}
+	defer func() {
+		_ = columnRows.Close()
+	}()
+
+	tmpColumnMap := make(map[string]string)
+	for columnRows.Next() {
+		columnName, dataType := "", ""
+		err := columnRows.Scan(&columnName, &dataType)
+		if err != nil {
+			return tmpIndexSlice, err
+		}
+		tmpColumnMap[columnName] = dataType
+	}
+
+	//拼接列数据
+	for _, v := range tmpUnion {
+		byStr, paramStr, whereStr, whereParam := "", "", "", ""
+		var tmpKeys []int
+		for tmpKey := range v {
+			tmpKeys = append(tmpKeys, tmpKey)
+		}
+		sort.Ints(tmpKeys)
+		for _, key := range tmpKeys {
+			tmpVal := v[key]
+			if byStr == "" {
+				byStr += fmt.Sprintf("%s", convertUpper(tmpVal, true))
+			} else {
+				byStr += fmt.Sprintf("And%s", convertUpper(tmpVal, true))
+			}
+			if paramStr == "" {
+				paramStr += fmt.Sprintf("%s %s", convertUpper(tmpVal, false), getType(tmpColumnMap[tmpVal], tmpVal))
+			} else {
+				paramStr += fmt.Sprintf(", %s %s", convertUpper(tmpVal, false), getType(tmpColumnMap[tmpVal], tmpVal))
+			}
+			if whereStr == "" {
+				whereStr += fmt.Sprintf("%s = ?", tmpVal)
+			} else {
+				whereStr += fmt.Sprintf(" and %s = ?", tmpVal)
+			}
+			if whereParam == "" {
+				whereParam += fmt.Sprintf("%s", convertUpper(tmpVal, false))
+			} else {
+				whereParam += fmt.Sprintf(", %s", convertUpper(tmpVal, false))
+			}
+		}
+		tmpIndexSlice = append(tmpIndexSlice, tableIndexParam{
+			byStr,
+			paramStr,
+			whereStr,
+			whereParam,
+		})
+	}
+
+	return tmpIndexSlice, nil
 }
 
 //---------------------------------------------------------------------------

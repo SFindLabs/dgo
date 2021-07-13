@@ -88,7 +88,9 @@ func (ts *JsonConf) GetArrayMap(path string, slave string, rmPath ...string) (re
 	for _, val := range rmPath {
 		rmMap[val] = true
 	}
+	//遍历判断是否有除了数据库连接参数外的其他数据库
 	for key, _ := range cMap {
+		//默认数据库的读库
 		if key == slave {
 			res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), true, slave, rmPath...)
 			if mapErr != nil {
@@ -97,6 +99,7 @@ func (ts *JsonConf) GetArrayMap(path string, slave string, rmPath ...string) (re
 			}
 			result = append(result, res)
 		} else {
+			//其他数据库
 			if _, ok := rmMap[key]; !ok {
 				res, mapErr := ts.GetArrayToMap(fmt.Sprintf("%s.%s", path, key), false, slave, rmPath...)
 				if mapErr != nil {
@@ -114,6 +117,7 @@ func (ts *JsonConf) GetArrayToMap(path string, isRead bool, slave string, str ..
 
 	result := make(map[string]map[string]string)
 	if isRead {
+		//读写分离下获取读库的各种连接参数
 		readChild, _ := ts.Container.Path(path).Children()
 		for readChildIndex, readChildVal := range readChild {
 			readChildIndexKey := fmt.Sprintf("default_read_0_%d", readChildIndex)
@@ -132,6 +136,7 @@ func (ts *JsonConf) GetArrayToMap(path string, isRead bool, slave string, str ..
 			}
 		}
 	} else {
+		//读写分离下获取写库同名下的后缀数字
 		childMap, _ := ts.Container.Path(path).ChildrenMap()
 		tmpName := strings.Split(path, ".")
 		nameIndex := strings.Split(tmpName[len(tmpName)-1], "_")
@@ -144,13 +149,26 @@ func (ts *JsonConf) GetArrayToMap(path string, isRead bool, slave string, str ..
 			}
 			childMapIndex = tmpIndex
 		}
-		for key, child := range childMap {
-			if key == slave {
+		//遍历写库所有参数
+		for childKey, child := range childMap {
+			//写库中的读库参数
+			if childKey == slave {
 				arrChild, _ := ts.Container.Path(fmt.Sprintf("%s.read", path)).Children()
 				for arrIndex, arrVal := range arrChild {
 					arrIndexKey := fmt.Sprintf("%s_read_%d_%d", nameIndex[0], childMapIndex, arrIndex)
+					//判断是否有默认的数据库连接参数
 					for _, key := range str {
+						//没有默认的数据库连接参数时获取写库的参数
 						if !arrVal.Exists(key) {
+							//写库也没有默认的数据库连接参数时获取默认数据库的连接参数
+							if childData, ok := childMap[key]; ok {
+								tmpVal := strings.TrimSpace(ts.ConvertTypeToString(childData.Data()))
+								if arrIndexKeyVal, ok := result[arrIndexKey]; ok {
+									arrIndexKeyVal[key] = tmpVal
+								} else {
+									result[arrIndexKey] = map[string]string{key: tmpVal}
+								}
+							}
 							continue
 						}
 
@@ -160,16 +178,15 @@ func (ts *JsonConf) GetArrayToMap(path string, isRead bool, slave string, str ..
 						} else {
 							result[arrIndexKey] = map[string]string{key: tmpVal}
 						}
-
 					}
 				}
 			} else {
 				childMapIndexKey := fmt.Sprintf("%s_write_%d_0", nameIndex[0], childMapIndex)
 				tmpVal := strings.TrimSpace(ts.ConvertTypeToString(child.Data()))
 				if childMapIndexVal, ok := result[childMapIndexKey]; ok {
-					childMapIndexVal[key] = tmpVal
+					childMapIndexVal[childKey] = tmpVal
 				} else {
-					result[childMapIndexKey] = map[string]string{key: tmpVal}
+					result[childMapIndexKey] = map[string]string{childKey: tmpVal}
 				}
 			}
 		}
