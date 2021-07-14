@@ -785,11 +785,11 @@ func (ts *cms) userpage(c *gin.Context) {
 		objs[i].LoginAt = kutils.FormatTime(objs[i].LoginAt)
 	}
 	kbase.RenderTokenHtml(c, "cms/user_list.html", gin.H{
-		"search_name": searchName,
-		"lists":       objs,
-		"paginate":    paginate,
-		"toUrl":       toUrl,
-		"count":       countNum,
+		"searchName": searchName,
+		"lists":      objs,
+		"paginate":   paginate,
+		"toUrl":      toUrl,
+		"count":      countNum,
 	})
 }
 
@@ -1099,8 +1099,8 @@ func (ts *cms) permissionpage(c *gin.Context) {
 		idsMap[id] = id
 	}
 	kbase.RenderTokenHtml(c, "cms/permission_list.html", gin.H{
-		"lists":       kutils.TreeMenu.MenuSearchMerge(objs, idsMap),
-		"search_name": searchName,
+		"lists":      kutils.TreeMenu.MenuSearchMerge(objs, idsMap),
+		"searchName": searchName,
 	})
 }
 
@@ -1116,7 +1116,7 @@ func (ts *cms) permissionaddpage(c *gin.Context) {
 	kbase.RenderTokenHtml(c, "cms/permission_add.html", gin.H{
 		"permissionId": id,
 		"lists":        kutils.TreeMenu.MenuMerge(objs),
-		"search_name":  searchName,
+		"searchName":   searchName,
 	})
 }
 
@@ -1212,9 +1212,9 @@ func (ts *cms) permissioneditpage(c *gin.Context) {
 	objs := kdaocms.CmsAdminPermissionsObj.GetAll(nil)
 	obj := kdaocms.CmsAdminPermissionsObj.GetById(nil, id)
 	kbase.RenderTokenHtml(c, "cms/permission_edit.html", gin.H{
-		"lists":       kutils.TreeMenu.MenuMerge(objs),
-		"obj":         obj,
-		"search_name": searchName,
+		"lists":      kutils.TreeMenu.MenuMerge(objs),
+		"obj":        obj,
+		"searchName": searchName,
 	})
 }
 
@@ -1509,10 +1509,10 @@ func (ts *cms) permissionsofrolesave(c *gin.Context) {
 //-----------------------------------------------------------------------------------
 
 func (ts *cms) logrecordpage(c *gin.Context) {
-	param := kbase.GetParam(c, "searchName")
+	param := kbase.GetParam(c, "search_name")
 	count, userIds := kdaocms.CmsAdminOptionLogObj.CountByUserName(nil, param)
 	params := map[string]interface{}{
-		"searchName": param,
+		"search_name": param,
 	}
 	paginate, toUrl, toPage, pageSize := kutils.Paginate(c, count, params)
 	objs := kdaocms.CmsAdminOptionLogObj.GetByUserName(nil, count, param, userIds, int64(toPage), int64(pageSize))
@@ -1564,17 +1564,8 @@ func (ts *cms) logrecorddel(c *gin.Context) {
 
 func (ts *cms) tables(c *gin.Context) {
 	dbName := kbase.GetParam(c, "dbName")
-	var db string
-	var tmpDbId int64
-	if dbName != "" {
-		tmpArr := strings.Split(dbName, "_")
-		tmpArrLen := len(tmpArr)
-		if tmpArrLen >= 1 {
-			db = tmpArr[0]
-		}
-		if tmpArrLen >= 2 {
-			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
-		}
+	if dbName == "" {
+		dbName = "all"
 	}
 
 	dbGorMArr := make([]string, 0)
@@ -1586,7 +1577,21 @@ func (ts *cms) tables(c *gin.Context) {
 		}
 	}
 
-	lists, _ := kdao.ScanData(nil, db, tmpDbId, "show table status")
+	lists := make([]map[string]interface{}, 0)
+	if dbName != "all" {
+		var db string
+		var tmpDbId int64
+		tmpArr := strings.Split(dbName, "_")
+		tmpArrLen := len(tmpArr)
+		if tmpArrLen >= 1 {
+			db = tmpArr[0]
+		}
+		if tmpArrLen >= 2 {
+			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+		}
+		lists, _ = kdao.ScanData(nil, db, tmpDbId, "show table status")
+	}
+
 	kbase.RenderTokenHtml(c, "cms/tables_list.html", gin.H{
 		"lists":  lists,
 		"count":  len(lists),
@@ -1599,6 +1604,7 @@ func (ts *cms) tables(c *gin.Context) {
 type optimizeBind struct {
 	TableName string `form:"table"  validate:"required" label:"数据表名"`
 	Engine    string `form:"engine"  validate:"required" label:"引擎"`
+	DbName    string `form:"db_name"  validate:"required" label:"数据库节点"`
 }
 
 func (ts *cms) optimize(c *gin.Context) {
@@ -1613,11 +1619,28 @@ func (ts *cms) optimize(c *gin.Context) {
 		kbase.SendErrorParamsJsonStr(c, kcode.OPERATION_WRONG, err, callbackName)
 		return
 	}
+
+	if param.DbName == "all" {
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+
+	var db string
+	var tmpDbId int64
+	tmpArr := strings.Split(param.DbName, "_")
+	tmpArrLen := len(tmpArr)
+	if tmpArrLen >= 1 {
+		db = tmpArr[0]
+	}
+	if tmpArrLen >= 2 {
+		tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+	}
+
 	switch strings.ToUpper(param.Engine) {
 	case "INNODB":
-		_, _ = kdao.ScanData(nil, "", 0, fmt.Sprintf("alter table %s engine = 'InnoDB'", param.TableName))
+		_, _ = kdao.ScanData(nil, db, tmpDbId, fmt.Sprintf("alter table %s engine = 'InnoDB'", param.TableName))
 	case "MYISAM":
-		_, _ = kdao.ScanData(nil, "", 0, fmt.Sprintf("optimize table %s", param.TableName))
+		_, _ = kdao.ScanData(nil, db, tmpDbId, fmt.Sprintf("optimize table %s", param.TableName))
 	default:
 		kbase.SendErrorJsonStr(c, kcode.WRONG_TABLE_ENGINE_OPTIMIZE, callbackName)
 		return
@@ -1626,21 +1649,25 @@ func (ts *cms) optimize(c *gin.Context) {
 }
 
 func (ts *cms) generatepage(c *gin.Context) {
-	tables := make([]map[string]interface{}, 0)
-	param := kbase.GetParam(c, "searchName")
 	dbName := kbase.GetParam(c, "dbName")
+	if dbName == "all" {
+		c.Redirect(http.StatusFound, "/tables")
+		return
+	}
+	param := kbase.GetParam(c, "searchName")
+	tables := make([]map[string]interface{}, 0)
+
 	var dbStr string
 	var tmpDbId int64
-	if dbName != "" {
-		tmpArr := strings.Split(dbName, "_")
-		tmpArrLen := len(tmpArr)
-		if tmpArrLen >= 1 {
-			dbStr = tmpArr[0]
-		}
-		if tmpArrLen >= 2 {
-			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
-		}
+	tmpArr := strings.Split(dbName, "_")
+	tmpArrLen := len(tmpArr)
+	if tmpArrLen >= 1 {
+		dbStr = tmpArr[0]
 	}
+	if tmpArrLen >= 2 {
+		tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
+	}
+
 	if param != "" {
 		sql := fmt.Sprintf("select table_name as name from information_schema.tables where table_schema='%s'", param)
 		tables, _ = kdao.ScanData(nil, dbStr, tmpDbId, sql)
@@ -1655,7 +1682,7 @@ func (ts *cms) generatepage(c *gin.Context) {
 }
 
 type generateBind struct {
-	DbName    string `form:"dbName"  validate:"-" label:"数据库节点"`
+	DbName    string `form:"db_name"  validate:"required" label:"数据库节点"`
 	Db        string `form:"db"  validate:"required" label:"数据库名"`
 	TableName string `form:"table"  validate:"required" label:"数据表名"`
 	IsSplit   int64  `form:"split"  validate:"required,min=1,max=2" label:"分库选项"`
@@ -1676,6 +1703,11 @@ func (ts *cms) generate(c *gin.Context) {
 		return
 	}
 
+	if param.DbName == "all" {
+		kbase.SendErrorJsonStr(c, kcode.OPERATION_WRONG, callbackName)
+		return
+	}
+
 	splitBool, divideBool, readBool := false, false, false
 	if param.IsSplit == 1 {
 		splitBool = true
@@ -1690,17 +1722,19 @@ func (ts *cms) generate(c *gin.Context) {
 
 	var dbStr string
 	var tmpDbId int64
-	if param.DbName != "" {
-		tmpArr := strings.Split(param.DbName, "_")
-		tmpArrLen := len(tmpArr)
-		if tmpArrLen >= 1 {
-			dbStr = tmpArr[0]
-		}
-		if tmpArrLen >= 2 {
-			tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
-		}
+	tmpArr := strings.Split(param.DbName, "_")
+	tmpArrLen := len(tmpArr)
+	if tmpArrLen >= 1 {
+		dbStr = tmpArr[0]
+	}
+	if tmpArrLen >= 2 {
+		tmpDbId, _ = strconv.ParseInt(tmpArr[1], 10, 64)
 	}
 
+	//默认库只显示空
+	if dbStr == kinit.DEFAULT_DB {
+		dbStr = ""
+	}
 	str := kutils.GenerateSql.Run(dbStr, tmpDbId, param.Db, param.TableName, splitBool, divideBool, readBool)
 	kbase.SendErrorOriginJsonStr(c, kcode.SUCCESS_STATUS, str, "")
 }

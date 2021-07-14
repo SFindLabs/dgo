@@ -10,7 +10,7 @@
             <div class="ibox-title">
                 <div class="form-group">
                     <label for="name" class="sr-only">键</label>
-                    <input type="text" name="searchName" placeholder="请输入键" class="form-control" value="{{ .searchName }}" aria-label="">
+                    <input type="text" name="search_name" placeholder="请输入键" class="form-control" value="{{ .searchName }}" aria-label="">
                 </div>
                 <button class="btn btn-white" onclick="search()"><i class="fa fa-search"></i> 搜索</button>
             </div>
@@ -109,8 +109,8 @@
     });
 
     function search() {
-        var name = $("input[name='searchName']").val();
-        window.location.href = {{ .toUrl }} + "&searchName=" + name;
+        var name = $("input[name='search_name']").val();
+        window.location.href = {{ .toUrl }} + "&search_name=" + name;
     }
 
     function changeSort(id, num) {

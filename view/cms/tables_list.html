@@ -11,6 +11,7 @@
                 <div class="form-group">
                     <label>数据库：</label>
                     <select class="form-control" name="db_name" aria-label="">
+                        <option value="all" {{ if eq .dbName "all" }} selected {{ end }}>请选择数据库</option>
                         {{ range $v := .dbArr }}
                             <option value="{{ $v }}" {{ if eq $.dbName $v }} selected {{ end }} title="配置文件的节点名称">{{ $v }}</option>
                         {{end}}
@@ -22,11 +23,13 @@
                 <div class="col-sm-12">
                     <div class="ibox float-e-margins">
                         <div class="ibox-content">
+                            {{ if ne .dbName "all" }}
                             <a href="/generatepage?dbName={{.dbName}}">
                                 <button type="button" class="btn btn-sm btn-primary">
                                     model生成器
                                 </button>
                             </a>
+                            {{end}}
                             <div class="table-responsive">
                                 <table class="table">
                                     <thead>
@@ -79,7 +82,7 @@
 
     // 优化
     function optimize(table, engine) {
-        $.post("/tables/optimize", {table: table, engine:engine}, function (res) {
+        $.post("/tables/optimize", {db_name:{{.dbName}},table: table, engine:engine}, function (res) {
             var jsonData = $.parseJSON(res);
             if(jsonData.status !== 200 && jsonData.status !== 20023){
                 layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});

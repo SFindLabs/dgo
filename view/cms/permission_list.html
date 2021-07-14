@@ -10,7 +10,7 @@
             <div class="ibox-title">
                 <div class="form-group">
                     <label>菜单名称：</label>
-                    <input type="text" aria-label="" name="search_name" placeholder="请输入菜单名称" class="form-control" value="{{ .search_name }}">
+                    <input type="text" aria-label="" name="search_name" placeholder="请输入菜单名称" class="form-control" value="{{ .searchName }}">
                 </div>
                 <button class="btn btn-white" type="submit"><i class="fa fa-search"></i> 搜索</button>
             </div>
@@ -19,7 +19,7 @@
             <div class="col-sm-12">
                 <div class="ibox float-e-margins">
                     <div class="ibox-content">
-                        <a href="/permissionaddpage?id=0&search_name={{ .search_name }}">
+                        <a href="/permissionaddpage?id=0&search_name={{ .searchName }}">
                             <button type="button" class="btn btn-sm btn-primary">
                                 添加菜单
                             </button>
@@ -47,7 +47,7 @@
                                         <td>{{if eq .IsRecord  1}} 是 {{else}} 否 {{end}}</td>
                                         <td>{{.CreatedAt}}</td>
                                         <td>
-                                            <a href="/permissioneditpage?id={{.ID}}&search_name={{ $.search_name }}">
+                                            <a href="/permissioneditpage?id={{.ID}}&search_name={{ $.searchName }}">
                                                 <button type="button" class="btn btn-xs btn-info">编辑
                                                 </button>
                                             </a>
@@ -55,7 +55,7 @@
                                                 <button type="button" class="btn btn-xs btn-warning">删除
                                                 </button>
                                             </a>
-                                            <a href="/permissionaddpage?id={{.ID}}&search_name={{ $.search_name }}">
+                                            <a href="/permissionaddpage?id={{.ID}}&search_name={{ $.searchName }}">
                                                 <button type="button" class="btn btn-xs btn-primary">
                                                     添加子菜单
                                                 </button>

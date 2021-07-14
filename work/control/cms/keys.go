@@ -38,10 +38,10 @@ func (ts *keys) Load() []kroute.RouteWrapStruct {
 //-----------------------------------------------------------------------------------
 
 func (ts *keys) keyspage(c *gin.Context) {
-	param := kbase.GetParam(c, "searchName")
+	param := kbase.GetParam(c, "search_name")
 	count := kdaocms.CmsKeysObj.CountByKey(nil, param)
 	params := map[string]interface{}{
-		"searchName": param,
+		"search_name": param,
 	}
 	paginate, toUrl, toPage, pageSize := kutils.Paginate(c, count, params)
 	objs := kdaocms.CmsKeysObj.GetAllByKey(nil, param, int64(toPage), int64(pageSize))

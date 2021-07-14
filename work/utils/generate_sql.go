@@ -16,15 +16,15 @@ type Generate struct {
 
 func (ts *Generate) Run(dbStr string, tmpDbId int64, tableSchema, tableName string, isSplit, isDivide, isRead bool) string {
 
-	tableMap, err := getTableStructure(dbStr, tmpDbId, tableSchema, tableName)
+	columnArr, tableMap, err := getTableStructure(dbStr, tmpDbId, tableSchema, tableName)
 	if err != nil {
 		kinit.LogError.Println("get table structure fail :", err)
 		return err.Error()
 	}
 
-	createStr := createTable(tableName, tableMap)
+	createStr := createTable(dbStr, tableName, columnArr, tableMap)
 
-	insertStr := insertTable(tableName, tableMap, isSplit, isDivide)
+	insertStr := insertTable(tableName, columnArr, tableMap, isSplit, isDivide)
 
 	getAllStr := getAllTable(tableName, isSplit, isDivide, isRead)
 
@@ -49,7 +49,7 @@ func (ts *Generate) Run(dbStr string, tmpDbId int64, tableSchema, tableName stri
 
 //---------------------------------------------------------------------------
 
-func createTable(tableName string, rows map[string]tableType) string {
+func createTable(dbStr string, tableName string, columnArr []string, rows map[string]tableType) string {
 	var sql string
 	upperTableName := convertUpper(tableName, true)
 	path, err := kruntime.GetCurrentPath()
@@ -60,13 +60,13 @@ func createTable(tableName string, rows map[string]tableType) string {
 	slicePath := strings.Split(path, "/")
 	dirName := slicePath[len(slicePath)-1]
 	sql += "package model\n\nimport (\n\t\"errors\"\n\tkinit \"" + dirName + "/work/base/initialize\"\n\tjgorm \"github.com/jinzhu/gorm\"\n\t//\"time\"\n)"
-	sql += "\n\nvar " + upperTableName + "Obj " + upperTableName + "\n\nvar " + convertUpper(tableName, false) + "DB = \"\"\n\ntype " + upperTableName + " struct {\n"
+	sql += "\n\nvar " + upperTableName + "Obj " + upperTableName + "\n\nvar " + convertUpper(tableName, false) + "DB = \"" + dbStr + "\"\n\ntype " + upperTableName + " struct {\n"
 
-	for rowKey, rowVal := range rows {
-		if "ID" == strings.ToUpper(rowKey) {
+	for _, column := range columnArr {
+		if "ID" == strings.ToUpper(column) {
 			sql += "\tID     int64  `gorm:\"primary_key\" json:\"-\"`\n"
 		} else {
-			sql += "\t" + convertUpper(rowKey, true) + " " + getType(rowVal.dataType, rowKey) + " `gorm:\"column:" + rowKey + "\" json:\"" + rowKey + "\"`\n"
+			sql += "\t" + convertUpper(column, true) + " " + getType(rows[column].dataType, column) + " `gorm:\"column:" + column + "\" json:\"" + column + "\"`\n"
 		}
 	}
 
@@ -79,7 +79,7 @@ func createTable(tableName string, rows map[string]tableType) string {
 
 //---------------------------------------------------------------------------
 
-func insertTable(tableName string, rows map[string]tableType, isSplit, isDivide bool) string {
+func insertTable(tableName string, columnArr []string, rows map[string]tableType, isSplit, isDivide bool) string {
 	var bf bytes.Buffer
 	var bt bytes.Buffer
 	dbName := convertUpper(tableName, false)
@@ -106,10 +106,10 @@ func insertTable(tableName string, rows map[string]tableType, isSplit, isDivide 
 	}
 	_, _ = fmt.Fprintf(&bt, "\n\t//timeStr := time.Now().Format(\"2006-01-02 15:04:05\")\n\tobj := %s{\n", upperTableName)
 
-	for rowKey, rowVal := range rows {
-		if rowVal.columnKey != "PRI" {
-			_, _ = fmt.Fprintf(&bf, ", %s %s", convertUpper(rowKey, false), getType(rowVal.dataType, rowKey))
-			_, _ = fmt.Fprintf(&bt, "\t\t%s:%s,\n", convertUpper(rowKey, true), convertUpper(rowKey, false))
+	for _, column := range columnArr {
+		if rows[column].columnKey != "PRI" {
+			_, _ = fmt.Fprintf(&bf, ", %s %s", convertUpper(column, false), getType(rows[column].dataType, column))
+			_, _ = fmt.Fprintf(&bt, "\t\t%s:%s,\n", convertUpper(column, true), convertUpper(column, false))
 		}
 	}
 
@@ -401,16 +401,17 @@ type tableType struct {
 	columnKey string
 }
 
-func getTableStructure(dbStr string, tmpDbId int64, tableSchema, tableName string) (map[string]tableType, error) {
+func getTableStructure(dbStr string, tmpDbId int64, tableSchema, tableName string) ([]string, map[string]tableType, error) {
 	tableMap := make(map[string]tableType)
+	columnArr := make([]string, 0)
 	sqlStr := "select column_name,data_type,column_key from information_schema.columns where table_schema=? and table_name=?;"
 	model, err := kinit.GetMysqlConnect(dbStr, tmpDbId)
 	if err != nil {
-		return tableMap, err
+		return columnArr, tableMap, err
 	}
 	rows, err := model.Raw(sqlStr, tableSchema, tableName).Rows()
 	if err != nil {
-		return tableMap, err
+		return columnArr, tableMap, err
 	}
 
 	defer func() {
@@ -420,15 +421,16 @@ func getTableStructure(dbStr string, tmpDbId int64, tableSchema, tableName strin
 		columnName, dataType, columnKey := "", "", ""
 		err := rows.Scan(&columnName, &dataType, &columnKey)
 		if err != nil {
-			return tableMap, err
+			return columnArr, tableMap, err
 		}
 		tableMap[columnName] = tableType{
 			dataType:  dataType,
 			columnKey: columnKey,
 		}
+		columnArr = append(columnArr, columnName)
 	}
 
-	return tableMap, nil
+	return columnArr, tableMap, nil
 }
 
 //---------------------------------------------------------------------------

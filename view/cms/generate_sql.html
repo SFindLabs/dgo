@@ -104,7 +104,7 @@
         var split = $("input[name='is_split_table']:checked").val();
         var divide = $("input[name='is_divide']:checked").val();
         var read = $("input[name='is_read_table']:checked").val();
-        $.post("/tables/generate", {db: db, table: table, split:split,divide:divide,read:read, dbName:{{.dbName}}}, function (res) {
+        $.post("/tables/generate", {db: db, table: table, split:split,divide:divide,read:read, db_name:{{.dbName}}}, function (res) {
             var jsonData = $.parseJSON(res);
             if(jsonData.status !== 200 && jsonData.status !== 20023){
                 layer.msg(jsonData.message, {icon: 2, time: 1800, title: "提示"});
