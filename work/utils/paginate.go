@@ -13,7 +13,7 @@ import (
  * 	param c *gin.Context
  * 	param count int	                    总记录数
  * 	param params map[string]interface{} 额外的查询参数
- *  param option int 				    初始每页条数、下拉初始条数和每次选择间隔条数(可选)
+ *  param option int 				    显示当前页条数(1: 显示  0: 不显示)、初始每页条数、下拉初始条数和每次选择间隔条数(可选)
  *  return 	分页html字符串, 当前路径(包含页数和每页条数,用于其他查询请求拼接), 当前页数, 每页条数
  */
 func Paginate(c *gin.Context, count int, params map[string]interface{}, option ...int) (string, string, int, int) {
@@ -21,17 +21,22 @@ func Paginate(c *gin.Context, count int, params map[string]interface{}, option .
 	toPage, total, pageSize := 1, 0, kcode.PAGE_NUMBER
 
 	countOption := len(option)
-	tmpPageSize, optionCount, step := kcode.PAGE_NUMBER, 5, 5
+	tmpCount, tmpPageSize, optionCount, step := 0, kcode.PAGE_NUMBER, 5, 5
 	switch countOption {
 	case 1:
-		tmpPageSize = option[0]
+		tmpCount = option[0]
 	case 2:
-		tmpPageSize = option[0]
-		optionCount = option[1]
+		tmpCount = option[0]
+		tmpPageSize = option[1]
 	case 3:
-		tmpPageSize = option[0]
-		optionCount = option[1]
-		step = option[2]
+		tmpCount = option[0]
+		tmpPageSize = option[1]
+		optionCount = option[2]
+	case 4:
+		tmpCount = option[0]
+		tmpPageSize = option[1]
+		optionCount = option[2]
+		step = option[3]
 	}
 
 	if pageSize != tmpPageSize {
@@ -114,7 +119,14 @@ func Paginate(c *gin.Context, count int, params map[string]interface{}, option .
 			<input type="number" class="text-center no-padding href_to" value="` + toPageStr + `" style="width: 50px; border: 0;outline:none;" aria-label=""> 页
 			</li>
 			<li class="disabled"><span>共` + totalStr + `页</span></li>
-			</ul>
+			`
+
+	//增加本页条数显示
+	if tmpCount == 1 {
+		html += `<li class="disabled"><span>本页%d条</span></li>`
+	}
+
+	html += `</ul>
 			<script>
 				$("#setPageSize").on('change', function(){
 					var size = $("option:selected", this).val();
