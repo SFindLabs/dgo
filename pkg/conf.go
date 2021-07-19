@@ -1,7 +1,10 @@
 package pkg
 
-//=======================微信=======================
+//================================微信或支付宝==============================================
+
 const (
+	//=======================微信=======================
+
 	WeChatUrl              = "https://api.weixin.qq.com"
 	WeChatMchSandboxURL    = "https://api.mch.weixin.qq.com/sandboxnew"
 	WeChatMchProductionURL = "https://api.mch.weixin.qq.com"
@@ -11,7 +14,7 @@ const (
 	WeChatCodeSuccess = "SUCCESS"
 	WeChatCodeFAIL    = "FAIL"
 
-	//==================================应用开发信息===================================
+	//---------------------------应用开发信息---------------------------------------
 	//提现
 	WeChatAppsProject   = "default"
 	WeChatAppsAppId     = "" //移动应用开发者ID
@@ -34,15 +37,16 @@ const (
 
 )
 
-//=======================支付宝============================
 const (
+	//=======================支付宝============================
+
 	AliPayProductionURL = "https://openapi.alipay.com/gateway.do"
 	AliPaySandboxURL    = "https://openapi.alipaydev.com/gateway.do"
 
 	AliPayProductionOAuthURL = "https://openauth.alipay.com"
 	AliPaySandboxOAuthURL    = "https://openauth.alipaydev.com"
 
-	//===================================应用开发信息============================================
+	//------------------------应用开发信息-------------------------------
 	//提现
 	AliPayAppsProject         = "default"
 	AliPayProductionAppsAppId = "" //即创建应用后生成
@@ -76,21 +80,22 @@ const (
 )
 
 //=========================上传================================
+
 const (
 	//--------------------------------obs-----------------------------------
-	ObsAK = ""
-	ObsSK = ""
 
+	ObsAK       = ""
+	ObsSK       = ""
 	ObsEndpoint = ""
-
-	ObsUrl    = ""
-	ObsBucket = ""
+	ObsBucket   = ""
+	ObsUrl      = ""
 
 	//-------------------------------oss------------------------------------
 
-	OssEndpoint         = ""
-	OssAk               = ""
-	OssSK               = ""
-	OssBucket           = ""
-	OssInternetEndpoint = ""
+	//endpoint带-internal的是内网，用于阿里云服务器快速上传(外网访问需要设置endpoint为外网[默认为http，需要https的要加上https://])
+
+	OssEndpoint = ""
+	OssAk       = ""
+	OssSK       = ""
+	OssBucket   = ""
 )

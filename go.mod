@@ -15,7 +15,6 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/gorilla/websocket v1.4.2
-	github.com/heyuanlong/go-utils v0.0.0-20190702075555-9bee8d5b0ac2
 	github.com/jinzhu/gorm v1.9.16
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1
@@ -24,5 +23,6 @@ require (
 	github.com/urfave/cli v1.22.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	moul.io/http2curl v1.0.0 // indirect
 )
